@@ -8,6 +8,7 @@ import {
 } from "drizzle-orm";
 
 import {
+  type Appointment,
   appointments,
   groomerSchedules,
   groomerServiceAreas,
@@ -50,6 +51,27 @@ export async function getBookingOptions(): Promise<BookingOption> {
   };
 }
 
+type AppointmentRow = {
+  appointment: Appointment;
+  groomer: typeof groomers.$inferSelect | null;
+  groomingPackage: typeof groomingPackages.$inferSelect;
+};
+
+function toAppointmentDetails(row: AppointmentRow): AppointmentDetails {
+  return {
+    ...row.appointment,
+    reference: row.appointment.bookingReference,
+    pet: { name: row.appointment.petName, breed: row.appointment.petBreed },
+    groomer: row.groomer,
+    package: row.groomingPackage,
+    startsAt: row.appointment.startsAt.toISOString(),
+    endsAt: row.appointment.endsAt.toISOString(),
+    cancelledAt: row.appointment.cancelledAt?.toISOString() ?? null,
+    createdAt: row.appointment.createdAt.toISOString(),
+    updatedAt: row.appointment.updatedAt.toISOString(),
+  };
+}
+
 export async function getAppointmentByReference(
   reference: string,
 ): Promise<AppointmentDetails | null> {
@@ -70,19 +92,21 @@ export async function getAppointmentByReference(
     .limit(1);
 
   const row = rows[0];
-  if (!row) return null;
+  return row ? toAppointmentDetails(row) : null;
+}
 
-  return {
-    ...row.appointment,
-    reference: row.appointment.bookingReference,
-    pet: { name: row.appointment.petName, breed: row.appointment.petBreed },
-    groomer: row.groomer,
-    package: row.groomingPackage,
-    startsAt: row.appointment.startsAt.toISOString(),
-    endsAt: row.appointment.endsAt.toISOString(),
-    createdAt: row.appointment.createdAt.toISOString(),
-    updatedAt: row.appointment.updatedAt.toISOString(),
-  };
+/** The bare appointment row, for routes that change it. */
+export async function getAppointmentRow(
+  reference: string,
+): Promise<Appointment | null> {
+  const db = getDatabase();
+  const rows = await db
+    .select()
+    .from(appointments)
+    .where(eq(appointments.bookingReference, reference))
+    .limit(1);
+
+  return rows[0] ?? null;
 }
 
 export async function getAppointments(): Promise<AppointmentDetails[]> {
@@ -98,17 +122,7 @@ export async function getAppointments(): Promise<AppointmentDetails[]> {
     .innerJoin(groomingPackages, eq(appointments.packageId, groomingPackages.id))
     .orderBy(desc(appointments.startsAt));
 
-  return rows.map((row) => ({
-    ...row.appointment,
-    reference: row.appointment.bookingReference,
-    pet: { name: row.appointment.petName, breed: row.appointment.petBreed },
-    groomer: row.groomer,
-    package: row.groomingPackage,
-    startsAt: row.appointment.startsAt.toISOString(),
-    endsAt: row.appointment.endsAt.toISOString(),
-    createdAt: row.appointment.createdAt.toISOString(),
-    updatedAt: row.appointment.updatedAt.toISOString(),
-  }));
+  return rows.map(toAppointmentDetails);
 }
 
 type ScheduleWindow = {
@@ -124,6 +138,13 @@ type BusyInterval = {
   endsAt: Date;
 };
 
+type GroomerMatchOptions = {
+  /** Ignore this appointment's own time when rescheduling it. */
+  excludeAppointmentId?: string;
+  /** Picked over other free groomers when they are free too. */
+  preferredGroomerId?: string | null;
+};
+
 /**
  * Schedules and appointments are interpreted in Seoul time: `weekday` and
  * `HH:MM` strings in groomer_schedules are KST wall-clock values.
@@ -132,6 +153,7 @@ export async function findAvailableGroomer(
   neighborhood: string,
   startsAt: Date,
   endsAt: Date,
+  { excludeAppointmentId, preferredGroomerId }: GroomerMatchOptions = {},
 ): Promise<string | null> {
   const start = seoulParts(startsAt);
   const end = seoulParts(endsAt);
@@ -141,26 +163,46 @@ export async function findAvailableGroomer(
   const db = getDatabase();
   const [schedules, busy] = await db.batch([
     neighborhoodSchedulesQuery(db, neighborhood, start.weekday),
-    neighborhoodBusyIntervalsQuery(db, neighborhood, startsAt, endsAt),
+    neighborhoodBusyIntervalsQuery(
+      db,
+      neighborhood,
+      startsAt,
+      endsAt,
+      excludeAppointmentId,
+    ),
   ]);
   const candidates = groomersCovering(schedules, start.time, end.time);
 
-  return pickFreeGroomer(candidates, busy, startsAt, endsAt);
+  return pickFreeGroomer(candidates, busy, startsAt, endsAt, preferredGroomerId);
 }
 
 const SLOT_DAYS_AHEAD = 7;
 
+/** Bookable days: the next week of Seoul days, starting tomorrow. */
+function bookingWindow(now = new Date()) {
+  const todayKey = seoulParts(now).dateKey;
+  return {
+    todayKey,
+    from: seoulDateTime(addDays(todayKey, 1), "00:00"),
+    to: seoulDateTime(addDays(todayKey, SLOT_DAYS_AHEAD + 1), "00:00"),
+  };
+}
+
+export function isWithinBookingWindow(startsAt: Date): boolean {
+  const { from, to } = bookingWindow();
+  return startsAt >= from && startsAt < to;
+}
+
 /**
- * Bookable start times (hourly, KST) for the next week of Seoul days,
- * starting tomorrow, where at least one groomer serving `neighborhood`
- * is scheduled and free for the package's full duration.
- * Returns null when the package doesn't exist.
+ * Bookable start times (hourly, KST) for the booking window where at least
+ * one groomer serving `neighborhood` is scheduled and free for the package's
+ * full duration. Returns null when the package doesn't exist.
  */
 export async function getAvailableSlots(
   neighborhood: string,
   packageId: string,
 ): Promise<AvailableSlot[] | null> {
-  const todayKey = seoulParts(new Date()).dateKey;
+  const { todayKey, from, to } = bookingWindow();
   const db = getDatabase();
   const [packageRows, schedules, busy] = await db.batch([
     db
@@ -169,16 +211,49 @@ export async function getAvailableSlots(
       .where(eq(groomingPackages.id, packageId))
       .limit(1),
     neighborhoodSchedulesQuery(db, neighborhood),
-    neighborhoodBusyIntervalsQuery(
-      db,
-      neighborhood,
-      seoulDateTime(addDays(todayKey, 1), "00:00"),
-      seoulDateTime(addDays(todayKey, SLOT_DAYS_AHEAD + 1), "00:00"),
-    ),
+    neighborhoodBusyIntervalsQuery(db, neighborhood, from, to),
   ]);
   const durationMinutes = packageRows[0]?.durationMinutes;
   if (durationMinutes === undefined) return null;
 
+  return buildSlots(todayKey, durationMinutes, schedules, busy);
+}
+
+/**
+ * Times `appointment` can move to: the same grid as new bookings, keeping its
+ * booked length, not counting its own current time as busy, and leaving out
+ * the time it already has.
+ */
+export async function getRescheduleSlots(
+  appointment: Appointment,
+): Promise<AvailableSlot[]> {
+  const { todayKey, from, to } = bookingWindow();
+  const db = getDatabase();
+  const [schedules, busy] = await db.batch([
+    neighborhoodSchedulesQuery(db, appointment.neighborhood),
+    neighborhoodBusyIntervalsQuery(
+      db,
+      appointment.neighborhood,
+      from,
+      to,
+      appointment.id,
+    ),
+  ]);
+  const durationMinutes =
+    (appointment.endsAt.getTime() - appointment.startsAt.getTime()) / 60_000;
+  const currentStart = appointment.startsAt.toISOString();
+
+  return buildSlots(todayKey, durationMinutes, schedules, busy).filter(
+    (slot) => slot.startsAt !== currentStart,
+  );
+}
+
+function buildSlots(
+  todayKey: string,
+  durationMinutes: number,
+  schedules: ScheduleWindow[],
+  busy: BusyInterval[],
+): AvailableSlot[] {
   const slots: AvailableSlot[] = [];
   for (let offset = 1; offset <= SLOT_DAYS_AHEAD; offset++) {
     const dateKey = addDays(todayKey, offset);
@@ -266,6 +341,7 @@ function neighborhoodBusyIntervalsQuery(
   neighborhood: string,
   from: Date,
   to: Date,
+  excludeAppointmentId?: string,
 ) {
   return db
     .select({
@@ -284,6 +360,9 @@ function neighborhoodBusyIntervalsQuery(
         lt(appointments.startsAt, to),
         gt(appointments.endsAt, from),
         ne(appointments.status, "cancelled"),
+        excludeAppointmentId === undefined
+          ? undefined
+          : ne(appointments.id, excludeAppointmentId),
       ),
     );
 }
@@ -304,6 +383,7 @@ function pickFreeGroomer(
   busy: BusyInterval[],
   startsAt: Date,
   endsAt: Date,
+  preferredGroomerId?: string | null,
 ): string | null {
   const busyGroomerIds = new Set(
     busy
@@ -312,9 +392,12 @@ function pickFreeGroomer(
       )
       .map((interval) => interval.groomerId),
   );
+  const free = candidates.filter(
+    (candidate) => !busyGroomerIds.has(candidate.groomerId),
+  );
 
   return (
-    candidates.find((candidate) => !busyGroomerIds.has(candidate.groomerId))
-      ?.groomerId ?? null
+    (free.find((candidate) => candidate.groomerId === preferredGroomerId) ??
+      free[0])?.groomerId ?? null
   );
 }

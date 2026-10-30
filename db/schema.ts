@@ -60,6 +60,7 @@ export const appointments = sqliteTable("appointments", {
   status: text("status").notNull().default("confirmed"),
   priceCents: integer("price_cents").notNull(),
   notes: text("notes"),
+  cancelledAt: integer("cancelled_at", { mode: "timestamp_ms" }),
   createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull(),
   updatedAt: integer("updated_at", { mode: "timestamp_ms" }).notNull(),
 });
