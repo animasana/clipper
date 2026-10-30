@@ -94,8 +94,8 @@ export function ManageAppointment({ reference, blockedReason }: ManageAppointmen
           </div>
         )}
         {mode === "confirm-cancel" && (
-          <div className="flex items-center gap-2">
-            <span className="font-semibold text-[#0a2540]">Cancel this visit?</span>
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="w-full font-semibold text-[#0a2540] sm:w-auto">Cancel this visit?</span>
             <Button type="button" onClick={() => submit("cancel")} disabled={submitting} className="h-10 rounded-md bg-[#9f3f38] px-4 text-sm font-bold !text-white shadow-none">{submitting ? "Cancelling…" : "Yes, cancel"}</Button>
             <Button type="button" variant="outline" onClick={reset} disabled={submitting} className="h-10 rounded-md border-[#dbe3ef] px-4 text-sm font-bold text-[#0a2540]">Keep it</Button>
           </div>
@@ -113,9 +113,9 @@ export function ManageAppointment({ reference, blockedReason }: ManageAppointmen
             {Object.entries(groupedSlots).map(([dateLabel, dateSlots]) => (
               <div key={dateLabel}>
                 <p className="mb-2 text-sm font-bold text-[#0a2540]">{dateLabel}</p>
-                <div className="grid grid-cols-2 gap-2">
+                <div className="grid grid-cols-2 gap-2 min-[360px]:grid-cols-3 sm:grid-cols-2">
                   {dateSlots.map((slot) => (
-                    <button type="button" key={slot.startsAt} onClick={() => { setSelectedStart(slot.startsAt); setError(""); }} className={cn("rounded-md border px-3 py-3 text-sm font-bold", selectedStart === slot.startsAt ? "border-[#635bff] bg-[#635bff] text-white" : "border-[#dbe3ef] bg-white text-[#425466]")}>
+                    <button type="button" key={slot.startsAt} onClick={() => { setSelectedStart(slot.startsAt); setError(""); }} className={cn("whitespace-nowrap rounded-md border px-2 py-3 text-sm font-bold sm:px-3", selectedStart === slot.startsAt ? "border-[#635bff] bg-[#635bff] text-white" : "border-[#dbe3ef] bg-white text-[#425466]")}>
                       {formatSeoulTime(slot.startsAt)}
                     </button>
                   ))}
