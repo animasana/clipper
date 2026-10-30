@@ -61,13 +61,14 @@ INSERT OR IGNORE INTO appointments
 VALUES
   ('apt_maya_luna', 'CLP-MAYA01', 'Luna', 'Miniature Poodle', 'gro_ava',
    'pkg_full_groom', '34 Hannam-daero, Yongsan-gu', 'Hannam-dong',
-   unixepoch('now', '+3 days', '+10 hours') * 1000,
-   unixepoch('now', '+3 days', '+11 hours', '+30 minutes') * 1000,
+   -- Times are Seoul wall-clock: shift to KST, anchor to the Seoul day, shift back.
+   unixepoch('now', '+9 hours', 'start of day', '+3 days', '+10 hours', '-9 hours') * 1000,
+   unixepoch('now', '+9 hours', 'start of day', '+3 days', '+11 hours', '+30 minutes', '-9 hours') * 1000,
    'confirmed', 95000, 'Please text when you are on the way.',
    unixepoch() * 1000, unixepoch() * 1000),
   ('apt_oliver_biscuit', 'CLP-OLIV01', 'Biscuit', 'Welsh Corgi', 'gro_marcus',
    'pkg_bath_brush', '18 Yanghwa-ro 23-gil, Mapo-gu', 'Yeonnam-dong',
-   unixepoch('now', '-5 days', '+9 hours') * 1000,
-   unixepoch('now', '-5 days', '+10 hours') * 1000,
+   unixepoch('now', '+9 hours', 'start of day', '-5 days', '+9 hours', '-9 hours') * 1000,
+   unixepoch('now', '+9 hours', 'start of day', '-5 days', '+10 hours', '-9 hours') * 1000,
    'completed', 65000, NULL,
    unixepoch() * 1000, unixepoch() * 1000);

@@ -1,4 +1,5 @@
-import { ArrowLeft, SearchX } from "lucide-react";
+import ArrowLeft from "lucide-react/icons/arrow-left";
+import SearchX from "lucide-react/icons/search-x";
 import Link from "next/link";
 
 export default function AppointmentNotFound() {

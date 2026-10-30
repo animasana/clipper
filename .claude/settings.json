@@ -1,0 +1,6 @@
+{
+    "permissions": {
+        "allow": ["PowerShell(npx tsc --noEmit*)", "Bash(npx tsc --noEmit*)"],
+        "deny": ["PowerShell(npm run deploy*)", "Bash(npm run deploy*)"]
+    }
+}

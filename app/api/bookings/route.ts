@@ -6,6 +6,7 @@ import {
 } from "@/db/schema";
 import { findAvailableGroomer } from "@/lib/clipper/data";
 import { getDatabase } from "@/lib/clipper/db";
+import { jsonError } from "@/lib/clipper/http";
 
 type BookingRequest = {
   petName?: unknown;
@@ -22,10 +23,7 @@ export async function POST(request: Request) {
   try {
     input = (await request.json()) as BookingRequest;
   } catch {
-    return Response.json(
-      { ok: false, error: "Request body must be valid JSON." },
-      { status: 400 },
-    );
+    return jsonError("Request body must be valid JSON.", 400);
   }
 
   const requiredFields = [
@@ -42,12 +40,9 @@ export async function POST(request: Request) {
   });
 
   if (missingFields.length > 0) {
-    return Response.json(
-      {
-        ok: false,
-        error: `Missing required fields: ${missingFields.join(", ")}.`,
-      },
-      { status: 400 },
+    return jsonError(
+      `Missing required fields: ${missingFields.join(", ")}.`,
+      400,
     );
   }
 
@@ -59,10 +54,7 @@ export async function POST(request: Request) {
   const startsAt = new Date(input.startsAt as string);
 
   if (Number.isNaN(startsAt.getTime())) {
-    return Response.json(
-      { ok: false, error: "startsAt must be a valid date." },
-      { status: 400 },
-    );
+    return jsonError("startsAt must be a valid date.", 400);
   }
 
   const db = getDatabase();
@@ -73,10 +65,7 @@ export async function POST(request: Request) {
     .limit(1);
 
   if (!groomingPackage) {
-    return Response.json(
-      { ok: false, error: "Grooming package was not found." },
-      { status: 404 },
-    );
+    return jsonError("Grooming package was not found.", 404);
   }
 
   const endsAt = new Date(
@@ -89,12 +78,9 @@ export async function POST(request: Request) {
   );
 
   if (!groomerId) {
-    return Response.json(
-      {
-        ok: false,
-        error: "No groomer is available for that neighborhood and time.",
-      },
-      { status: 409 },
+    return jsonError(
+      "No groomer is available for that neighborhood and time.",
+      409,
     );
   }
 

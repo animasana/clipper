@@ -1,29 +1,15 @@
-import { env } from "cloudflare:workers";
-import { drizzle } from "drizzle-orm/d1";
-
-import * as schema from "@/db/schema";
-import { groomerServiceAreas, groomingPackages } from "@/db/schema";
+import { getBookingOptions } from "@/lib/clipper/data";
+import { jsonError } from "@/lib/clipper/http";
 
 export async function GET() {
   try {
-    const bindings = env as unknown as Record<string, D1Database>;
-    const db = drizzle(bindings.DB, { schema });
-
-    const packages = await db.select().from(groomingPackages);
-    const areas = await db
-      .select({ neighborhood: groomerServiceAreas.neighborhood })
-      .from(groomerServiceAreas);
-
-    return Response.json({
-      packages,
-      neighborhoods: [...new Set(areas.map((area) => area.neighborhood))].sort(),
+    // The catalog changes rarely; let browsers reuse it for a few minutes.
+    return Response.json(await getBookingOptions(), {
+      headers: { "Cache-Control": "public, max-age=300" },
     });
   } catch (error) {
-    console.error("error");
+    console.error("Failed to load booking options", error);
 
-    return Response.json(
-      { ok: false, error: "We could not load booking options." },
-      { status: 500 },
-    );
+    return jsonError("We could not load booking options.", 500);
   }
 }

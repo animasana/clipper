@@ -1,9 +1,13 @@
-import { ArrowLeft, ArrowUpRight, Phone } from "lucide-react";
+import ArrowLeft from "lucide-react/icons/arrow-left";
+import ArrowUpRight from "lucide-react/icons/arrow-up-right";
+import Phone from "lucide-react/icons/phone";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { AppointmentCard } from "@/components/clipper/appointment-card";
 import { BookingConfirmation } from "@/components/clipper/booking-confirmation";
+import { ManageAppointment } from "@/components/clipper/manage-appointment";
+import { changeBlockedReason } from "@/lib/clipper/changes";
 import { getAppointmentByReference } from "@/lib/clipper/data";
 
 type AppointmentPageProps = {
@@ -20,8 +24,10 @@ export default async function AppointmentPage({ params }: AppointmentPageProps) 
     notFound();
   }
 
+  const isCancelled = appointment.status === "cancelled";
+
   return (
-    <main className="relative min-h-screen overflow-hidden bg-[#f7f9fc] text-[#0a2540]">
+    <main className="relative min-h-screen overflow-clip bg-[#f7f9fc] text-[#0a2540]">
       <div aria-hidden="true" className="absolute -right-[28rem] -top-[35rem] h-[62rem] w-[62rem] rotate-[24deg] bg-[linear-gradient(135deg,#ffdb80,#ff8f70_28%,#d783ff_52%,#7a73ff_74%,#68d5ff)] opacity-55 blur-[3px]" />
       <div className="mx-auto max-w-6xl px-5 pb-16 sm:px-8 lg:px-12">
         <header className="relative flex items-center justify-between py-6 sm:py-8">
@@ -41,10 +47,16 @@ export default async function AppointmentPage({ params }: AppointmentPageProps) 
             <AppointmentCard appointment={appointment} />
           </div>
 
-          <div className="mt-8 flex flex-col gap-4 rounded-2xl border border-[#dbe3ef] bg-white px-5 py-5 text-sm text-[#53627a] sm:flex-row sm:items-center sm:justify-between sm:px-7">
+          {!isCancelled && (
+            <div className="mt-8">
+              <ManageAppointment reference={appointment.reference} blockedReason={changeBlockedReason(appointment)} />
+            </div>
+          )}
+
+          <div className="mt-4 flex flex-col gap-4 rounded-2xl border border-[#dbe3ef] bg-white px-5 py-5 text-sm text-[#53627a] sm:flex-row sm:items-center sm:justify-between sm:px-7">
             <div>
-              <p className="font-semibold text-[#0a2540]">Need to change something?</p>
-              <p className="mt-1">Give our tiny team a call and we&apos;ll take care of it.</p>
+              <p className="font-semibold text-[#0a2540]">{isCancelled ? "Questions about this visit?" : "Need to change something else?"}</p>
+              <p className="mt-1">{isCancelled ? "Give our tiny team a call and we’ll take care of it." : "Within 24 hours of your visit, or for anything else, give our tiny team a call."}</p>
             </div>
             <a href="tel:+8225550142" className="inline-flex items-center gap-2 font-bold text-[#635bff] hover:text-[#0a2540]">
               <Phone aria-hidden="true" className="size-4" /> 02-555-0142
