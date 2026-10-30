@@ -3,7 +3,6 @@ import {
   desc,
   eq,
   gt,
-  inArray,
   lt,
   ne,
 } from "drizzle-orm";
@@ -17,19 +16,29 @@ import {
 } from "@/db/schema";
 
 import { getDatabase } from "./db";
+import {
+  addDays,
+  fromMinutes,
+  seoulDateTime,
+  seoulParts,
+  toMinutes,
+  weekdayOf,
+} from "./time";
 import type {
   AppointmentDetails,
+  AvailableSlot,
   BookingOption,
-  GroomingPackage,
 } from "./types";
 
 export async function getBookingOptions(): Promise<BookingOption> {
   const db = getDatabase();
 
-  const packageRows = await db.select().from(groomingPackages);
-  const neighborhoodRows = await db
-    .select({ neighborhood: groomerServiceAreas.neighborhood })
-    .from(groomerServiceAreas);
+  const [packageRows, neighborhoodRows] = await db.batch([
+    db.select().from(groomingPackages),
+    db
+      .select({ neighborhood: groomerServiceAreas.neighborhood })
+      .from(groomerServiceAreas),
+  ]);
 
   const neighborhoods = [
     ...new Set(neighborhoodRows.map((row) => row.neighborhood)),
@@ -102,19 +111,127 @@ export async function getAppointments(): Promise<AppointmentDetails[]> {
   }));
 }
 
+type ScheduleWindow = {
+  groomerId: string;
+  weekday: number;
+  startTime: string;
+  endTime: string;
+};
+
+type BusyInterval = {
+  groomerId: string | null;
+  startsAt: Date;
+  endsAt: Date;
+};
+
+/**
+ * Schedules and appointments are interpreted in Seoul time: `weekday` and
+ * `HH:MM` strings in groomer_schedules are KST wall-clock values.
+ */
 export async function findAvailableGroomer(
   neighborhood: string,
   startsAt: Date,
   endsAt: Date,
 ): Promise<string | null> {
-  const db = getDatabase();
-  const weekday = startsAt.getUTCDay();
-  const requestedStart = timeOfDay(startsAt);
-  const requestedEnd = timeOfDay(endsAt);
+  const start = seoulParts(startsAt);
+  const end = seoulParts(endsAt);
+  // Visits never run past midnight; schedules are per-day windows.
+  if (start.dateKey !== end.dateKey) return null;
 
-  const scheduledGroomers = await db
+  const db = getDatabase();
+  const [schedules, busy] = await db.batch([
+    neighborhoodSchedulesQuery(db, neighborhood, start.weekday),
+    neighborhoodBusyIntervalsQuery(db, neighborhood, startsAt, endsAt),
+  ]);
+  const candidates = groomersCovering(schedules, start.time, end.time);
+
+  return pickFreeGroomer(candidates, busy, startsAt, endsAt);
+}
+
+const SLOT_DAYS_AHEAD = 7;
+
+/**
+ * Bookable start times (hourly, KST) for the next week of Seoul days,
+ * starting tomorrow, where at least one groomer serving `neighborhood`
+ * is scheduled and free for the package's full duration.
+ * Returns null when the package doesn't exist.
+ */
+export async function getAvailableSlots(
+  neighborhood: string,
+  packageId: string,
+): Promise<AvailableSlot[] | null> {
+  const todayKey = seoulParts(new Date()).dateKey;
+  const db = getDatabase();
+  const [packageRows, schedules, busy] = await db.batch([
+    db
+      .select({ durationMinutes: groomingPackages.durationMinutes })
+      .from(groomingPackages)
+      .where(eq(groomingPackages.id, packageId))
+      .limit(1),
+    neighborhoodSchedulesQuery(db, neighborhood),
+    neighborhoodBusyIntervalsQuery(
+      db,
+      neighborhood,
+      seoulDateTime(addDays(todayKey, 1), "00:00"),
+      seoulDateTime(addDays(todayKey, SLOT_DAYS_AHEAD + 1), "00:00"),
+    ),
+  ]);
+  const durationMinutes = packageRows[0]?.durationMinutes;
+  if (durationMinutes === undefined) return null;
+
+  const slots: AvailableSlot[] = [];
+  for (let offset = 1; offset <= SLOT_DAYS_AHEAD; offset++) {
+    const dateKey = addDays(todayKey, offset);
+    const weekday = weekdayOf(dateKey);
+    const daySchedules = schedules.filter(
+      (schedule) => schedule.weekday === weekday,
+    );
+
+    const startMinutes = new Set<number>();
+    for (const schedule of daySchedules) {
+      const close = toMinutes(schedule.endTime);
+      for (
+        let minute = toMinutes(schedule.startTime);
+        minute + durationMinutes <= close;
+        minute += 60
+      ) {
+        startMinutes.add(minute);
+      }
+    }
+
+    for (const minute of [...startMinutes].sort((a, b) => a - b)) {
+      const startTime = fromMinutes(minute);
+      const endTime = fromMinutes(minute + durationMinutes);
+      const startsAt = seoulDateTime(dateKey, startTime);
+      const endsAt = seoulDateTime(dateKey, endTime);
+      const candidates = groomersCovering(daySchedules, startTime, endTime);
+
+      if (pickFreeGroomer(candidates, busy, startsAt, endsAt)) {
+        slots.push({
+          startsAt: startsAt.toISOString(),
+          endsAt: endsAt.toISOString(),
+        });
+      }
+    }
+  }
+
+  return slots;
+}
+
+type Database = ReturnType<typeof getDatabase>;
+
+// The query builders below are returned unawaited so callers can send
+// them to D1 together with db.batch() in a single round trip.
+
+function neighborhoodSchedulesQuery(
+  db: Database,
+  neighborhood: string,
+  weekday?: number,
+) {
+  return db
     .select({
       groomerId: groomers.id,
+      weekday: groomerSchedules.weekday,
       startTime: groomerSchedules.startTime,
       endTime: groomerSchedules.endTime,
     })
@@ -125,52 +242,79 @@ export async function findAvailableGroomer(
     )
     .innerJoin(
       groomerSchedules,
-      and(
-        eq(groomerSchedules.groomerId, groomers.id),
-        eq(groomerSchedules.weekday, weekday),
-      ),
+      eq(groomerSchedules.groomerId, groomers.id),
     )
     .where(
       and(
         eq(groomers.active, true),
         eq(groomerServiceAreas.neighborhood, neighborhood),
         eq(groomerSchedules.available, true),
+        weekday === undefined
+          ? undefined
+          : eq(groomerSchedules.weekday, weekday),
       ),
     );
+}
 
-  const candidates = scheduledGroomers.filter(
-    (groomer) =>
-      groomer.startTime <= requestedStart && groomer.endTime >= requestedEnd,
-  );
-  if (candidates.length === 0) return null;
-
-  const candidateIds = candidates.map((groomer) => groomer.groomerId);
-  const conflictingAppointments = await db
-    .select({ groomerId: appointments.groomerId })
+/**
+ * Non-cancelled appointments overlapping `from`–`to` for every groomer who
+ * serves `neighborhood`, wherever the appointment itself is (a groomer booked
+ * in another neighborhood is still busy).
+ */
+function neighborhoodBusyIntervalsQuery(
+  db: Database,
+  neighborhood: string,
+  from: Date,
+  to: Date,
+) {
+  return db
+    .select({
+      groomerId: appointments.groomerId,
+      startsAt: appointments.startsAt,
+      endsAt: appointments.endsAt,
+    })
     .from(appointments)
+    .innerJoin(
+      groomerServiceAreas,
+      eq(groomerServiceAreas.groomerId, appointments.groomerId),
+    )
     .where(
       and(
-        inArray(appointments.groomerId, candidateIds),
-        lt(appointments.startsAt, endsAt),
-        gt(appointments.endsAt, startsAt),
+        eq(groomerServiceAreas.neighborhood, neighborhood),
+        lt(appointments.startsAt, to),
+        gt(appointments.endsAt, from),
         ne(appointments.status, "cancelled"),
       ),
     );
+}
 
-  const busyGroomerIds = new Set(
-    conflictingAppointments
-      .map((appointment) => appointment.groomerId)
-      .filter((groomerId): groomerId is string => Boolean(groomerId)),
-  );
-
-  return (
-    candidates.find((groomer) => !busyGroomerIds.has(groomer.groomerId))
-      ?.groomerId ?? null
+/** Schedules whose window fully contains `startTime`–`endTime` ("HH:MM", lexical compare). */
+function groomersCovering(
+  schedules: ScheduleWindow[],
+  startTime: string,
+  endTime: string,
+) {
+  return schedules.filter(
+    (schedule) => schedule.startTime <= startTime && schedule.endTime >= endTime,
   );
 }
 
-function timeOfDay(date: Date): string {
-  return `${String(date.getUTCHours()).padStart(2, "0")}:${String(
-    date.getUTCMinutes(),
-  ).padStart(2, "0")}`;
+function pickFreeGroomer(
+  candidates: ScheduleWindow[],
+  busy: BusyInterval[],
+  startsAt: Date,
+  endsAt: Date,
+): string | null {
+  const busyGroomerIds = new Set(
+    busy
+      .filter(
+        (interval) => interval.startsAt < endsAt && interval.endsAt > startsAt,
+      )
+      .map((interval) => interval.groomerId),
+  );
+
+  return (
+    candidates.find((candidate) => !busyGroomerIds.has(candidate.groomerId))
+      ?.groomerId ?? null
+  );
 }

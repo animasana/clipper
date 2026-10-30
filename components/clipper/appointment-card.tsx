@@ -1,16 +1,13 @@
-"use client";
+import CalendarDays from "lucide-react/icons/calendar-days";
+import Check from "lucide-react/icons/check";
+import Clock3 from "lucide-react/icons/clock-3";
+import Dog from "lucide-react/icons/dog";
+import MapPin from "lucide-react/icons/map-pin";
+import Scissors from "lucide-react/icons/scissors";
+import StickyNote from "lucide-react/icons/sticky-note";
+import UserRound from "lucide-react/icons/user-round";
 
-import {
-  CalendarDays,
-  Check,
-  Clock3,
-  Dog,
-  MapPin,
-  Scissors,
-  StickyNote,
-  UserRound,
-} from "lucide-react";
-
+import { formatSeoulDate, formatSeoulTime } from "@/lib/clipper/time";
 import type { AppointmentDetails } from "@/lib/clipper/types";
 
 type AppointmentCardProps = {
@@ -63,43 +60,6 @@ const statusLabels: Record<string, { label: string; className: string }> = {
   },
 };
 
-const weekdays = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
-const months = [
-  "January",
-  "February",
-  "March",
-  "April",
-  "May",
-  "June",
-  "July",
-  "August",
-  "September",
-  "October",
-  "November",
-  "December",
-];
-
-function asDate(value: Date | number | string | null | undefined) {
-  if (!value) return null;
-  return value instanceof Date ? value : new Date(value);
-}
-
-function formatDate(value: Date | number | string | null | undefined) {
-  const date = asDate(value);
-  if (!date || Number.isNaN(date.getTime())) return "Date to be confirmed";
-  return `${weekdays[date.getDay()]}, ${months[date.getMonth()]} ${date.getDate()}, ${date.getFullYear()}`;
-}
-
-function formatTime(value: Date | number | string | null | undefined) {
-  const date = asDate(value);
-  if (!date || Number.isNaN(date.getTime())) return "Time to be confirmed";
-  const hour = date.getHours();
-  const minute = date.getMinutes().toString().padStart(2, "0");
-  const meridiem = hour >= 12 ? "PM" : "AM";
-  const twelveHour = hour % 12 || 12;
-  return `${twelveHour}:${minute} ${meridiem}`;
-}
-
 function formatPrice(priceCents: number | null | undefined) {
   if (typeof priceCents !== "number") return "Price to be confirmed";
   return `₩${priceCents.toLocaleString("ko-KR")}`;
@@ -112,9 +72,9 @@ export function AppointmentCard({ appointment }: AppointmentCardProps) {
     label: details.status ?? "Booked",
     className: "border-[#cbd8ff] bg-[#eef1ff] text-[#4353a3]",
   };
-  const appointmentDate = formatDate(details.startsAt);
-  const startTime = formatTime(details.startsAt);
-  const endTime = formatTime(details.endsAt);
+  const appointmentDate = formatSeoulDate(details.startsAt, "full") ?? "Date to be confirmed";
+  const startTime = formatSeoulTime(details.startsAt) ?? "Time to be confirmed";
+  const endTime = formatSeoulTime(details.endsAt) ?? "Time to be confirmed";
   const address = details.address ?? "Address to be confirmed";
   const neighborhood = details.neighborhood ? `, ${details.neighborhood}` : "";
   const petName = details.pet?.name ?? "Your pet";

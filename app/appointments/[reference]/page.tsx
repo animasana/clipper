@@ -1,4 +1,6 @@
-import { ArrowLeft, ArrowUpRight, Phone } from "lucide-react";
+import ArrowLeft from "lucide-react/icons/arrow-left";
+import ArrowUpRight from "lucide-react/icons/arrow-up-right";
+import Phone from "lucide-react/icons/phone";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 

@@ -1,18 +1,12 @@
 import Link from "next/link";
 
 import { getAppointments } from "@/lib/clipper/data";
+import { formatSeoulDate, formatSeoulTime } from "@/lib/clipper/time";
 
 export const dynamic = "force-dynamic";
 
-const DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-
 function formatDate(value: string) {
-  const date = new Date(value);
-  const hours = date.getHours();
-  const suffix = hours >= 12 ? "PM" : "AM";
-  const hour12 = hours % 12 === 0 ? 12 : hours % 12;
-  return `${DAYS[date.getDay()]}, ${MONTHS[date.getMonth()]} ${date.getDate()} · ${hour12}:${String(date.getMinutes()).padStart(2, "0")} ${suffix}`;
+  return `${formatSeoulDate(value)} · ${formatSeoulTime(value)}`;
 }
 
 function formatMoney(cents: number) {

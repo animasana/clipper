@@ -1,6 +1,6 @@
 "use client";
 
-import { RefreshCcw } from "lucide-react";
+import RefreshCcw from "lucide-react/icons/refresh-ccw";
 
 export default function AppointmentError({ reset }: { reset: () => void }) {
   return (
