@@ -1,10 +1,7 @@
 import { eq } from "drizzle-orm";
 
-import {
-  appointments,
-  groomingPackages,
-} from "@/db/schema";
-import { findAvailableGroomer } from "@/lib/clipper/data";
+import { groomingPackages } from "@/db/schema";
+import { createAppointmentWithFreeGroomer } from "@/lib/clipper/data";
 import { getDatabase } from "@/lib/clipper/db";
 import { jsonError } from "@/lib/clipper/http";
 
@@ -71,18 +68,6 @@ export async function POST(request: Request) {
   const endsAt = new Date(
     startsAt.getTime() + groomingPackage.durationMinutes * 60 * 1000,
   );
-  const groomerId = await findAvailableGroomer(
-    neighborhood,
-    startsAt,
-    endsAt,
-  );
-
-  if (!groomerId) {
-    return jsonError(
-      "No groomer is available for that neighborhood and time.",
-      409,
-    );
-  }
 
   const now = new Date();
   const bookingReference = `CLP-${Math.random()
@@ -93,12 +78,11 @@ export async function POST(request: Request) {
     .toString(36)
     .slice(2, 7)}`;
 
-  await db.insert(appointments).values({
+  const groomerId = await createAppointmentWithFreeGroomer({
     id: appointmentId,
     bookingReference,
     petName: petName.trim(),
     petBreed: petBreed.trim(),
-    groomerId,
     packageId,
     address: address.trim(),
     neighborhood: neighborhood.trim(),
@@ -110,6 +94,13 @@ export async function POST(request: Request) {
     createdAt: now,
     updatedAt: now,
   });
+
+  if (!groomerId) {
+    return jsonError(
+      "No groomer is available for that neighborhood and time.",
+      409,
+    );
+  }
 
   // log it, don't make the customer wait for it
   Promise.resolve().then(() => {

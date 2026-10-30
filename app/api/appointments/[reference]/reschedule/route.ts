@@ -1,13 +1,9 @@
-import { and, eq, inArray } from "drizzle-orm";
-
-import { appointments } from "@/db/schema";
-import { CHANGEABLE_STATUSES, changeBlockedReason } from "@/lib/clipper/changes";
+import { changeBlockedReason } from "@/lib/clipper/changes";
 import {
-  findAvailableGroomer,
   getAppointmentRow,
   isWithinBookingWindow,
+  moveAppointmentToFreeGroomer,
 } from "@/lib/clipper/data";
-import { getDatabase } from "@/lib/clipper/db";
 import { jsonError } from "@/lib/clipper/http";
 
 type RouteContext = {
@@ -59,37 +55,15 @@ export async function POST(request: Request, { params }: RouteContext) {
     startsAt.getTime() +
       (appointment.endsAt.getTime() - appointment.startsAt.getTime()),
   );
-  const groomerId = await findAvailableGroomer(
-    appointment.neighborhood,
-    startsAt,
-    endsAt,
-    {
-      excludeAppointmentId: appointment.id,
-      preferredGroomerId: appointment.groomerId,
-    },
-  );
+  const result = await moveAppointmentToFreeGroomer(appointment, startsAt, endsAt);
 
-  if (!groomerId) {
+  if (result === "no-groomer") {
     return jsonError(
       "No groomer is available for that neighborhood and time.",
       409,
     );
   }
-
-  // Guarded on the status and time we checked, so a concurrent change wins cleanly.
-  const updated = await getDatabase()
-    .update(appointments)
-    .set({ startsAt, endsAt, groomerId, updatedAt: new Date() })
-    .where(
-      and(
-        eq(appointments.id, appointment.id),
-        eq(appointments.startsAt, appointment.startsAt),
-        inArray(appointments.status, CHANGEABLE_STATUSES),
-      ),
-    )
-    .returning({ id: appointments.id });
-
-  if (updated.length === 0) {
+  if (result === "changed") {
     return jsonError("This visit just changed. Please reload and try again.", 409);
   }
 
