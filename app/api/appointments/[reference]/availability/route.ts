@@ -1,6 +1,6 @@
 import { changeBlockedReason } from "@/lib/clipper/changes";
 import { getAppointmentRow, getRescheduleSlots } from "@/lib/clipper/data";
-import { jsonError } from "@/lib/clipper/http";
+import { jsonError, logError } from "@/lib/clipper/http";
 
 type RouteContext = {
   params: Promise<{ reference: string }>;
@@ -20,7 +20,7 @@ export async function GET(_request: Request, { params }: RouteContext) {
     const slots = await getRescheduleSlots(appointment);
     return Response.json({ slots });
   } catch (error) {
-    console.error("Failed to load reschedule availability", error);
+    logError("failed to load reschedule availability", error, { reference });
 
     return jsonError("We could not load availability.", 500);
   }

@@ -3,7 +3,8 @@ import { eq } from "drizzle-orm";
 import { groomingPackages } from "@/db/schema";
 import { createAppointmentWithFreeGroomer } from "@/lib/clipper/data";
 import { getDatabase } from "@/lib/clipper/db";
-import { jsonError } from "@/lib/clipper/http";
+import { jsonError, logError, logEvent } from "@/lib/clipper/http";
+import { createAppointmentId, createBookingReference } from "@/lib/clipper/ids";
 
 type BookingRequest = {
   petName?: unknown;
@@ -54,61 +55,55 @@ export async function POST(request: Request) {
     return jsonError("startsAt must be a valid date.", 400);
   }
 
-  const db = getDatabase();
-  const [groomingPackage] = await db
-    .select()
-    .from(groomingPackages)
-    .where(eq(groomingPackages.id, packageId))
-    .limit(1);
+  try {
+    const db = getDatabase();
+    const [groomingPackage] = await db
+      .select()
+      .from(groomingPackages)
+      .where(eq(groomingPackages.id, packageId))
+      .limit(1);
 
-  if (!groomingPackage) {
-    return jsonError("Grooming package was not found.", 404);
-  }
+    if (!groomingPackage) {
+      return jsonError("Grooming package was not found.", 404);
+    }
 
-  const endsAt = new Date(
-    startsAt.getTime() + groomingPackage.durationMinutes * 60 * 1000,
-  );
-
-  const now = new Date();
-  const bookingReference = `CLP-${Math.random()
-    .toString(36)
-    .slice(2, 8)
-    .toUpperCase()}`;
-  const appointmentId = `apt_${Date.now()}_${Math.random()
-    .toString(36)
-    .slice(2, 7)}`;
-
-  const groomerId = await createAppointmentWithFreeGroomer({
-    id: appointmentId,
-    bookingReference,
-    petName: petName.trim(),
-    petBreed: petBreed.trim(),
-    packageId,
-    address: address.trim(),
-    neighborhood: neighborhood.trim(),
-    startsAt,
-    endsAt,
-    status: "confirmed",
-    priceCents: groomingPackage.priceCents,
-    notes: null,
-    createdAt: now,
-    updatedAt: now,
-  });
-
-  if (!groomerId) {
-    return jsonError(
-      "No groomer is available for that neighborhood and time.",
-      409,
+    const endsAt = new Date(
+      startsAt.getTime() + groomingPackage.durationMinutes * 60 * 1000,
     );
-  }
 
-  // log it, don't make the customer wait for it
-  Promise.resolve().then(() => {
-    console.info("Clipper booking created", {
+    const now = new Date();
+    const bookingReference = createBookingReference();
+
+    const groomerId = await createAppointmentWithFreeGroomer({
+      id: createAppointmentId(),
       bookingReference,
       petName: petName.trim(),
+      petBreed: petBreed.trim(),
+      packageId,
+      address: address.trim(),
+      neighborhood: neighborhood.trim(),
+      startsAt,
+      endsAt,
+      status: "confirmed",
+      priceCents: groomingPackage.priceCents,
+      notes: null,
+      createdAt: now,
+      updatedAt: now,
     });
-  });
 
-  return Response.json({ ok: true, reference: bookingReference });
+    if (!groomerId) {
+      return jsonError(
+        "No groomer is available for that neighborhood and time.",
+        409,
+      );
+    }
+
+    logEvent("booking created", { bookingReference, packageId, groomerId });
+
+    return Response.json({ ok: true, reference: bookingReference });
+  } catch (error) {
+    logError("failed to create booking", error, { packageId });
+
+    return jsonError("We could not create your booking.", 500);
+  }
 }
