@@ -40,8 +40,8 @@ export function ManageAppointment({ reference, blockedReason }: ManageAppointmen
 
   if (blockedReason) {
     return (
-      <section className="rounded-2xl border border-[#dbe3ef] bg-white px-5 py-5 text-sm text-[#53627a] sm:px-7">
-        <p className="font-semibold text-[#0a2540]">Changes</p>
+      <section className="rounded-2xl border border-line bg-surface px-5 py-5 text-sm text-ink-muted sm:px-7">
+        <p className="font-semibold text-ink">Changes</p>
         <p className="mt-1">{blockedReason}</p>
       </section>
     );
@@ -81,41 +81,41 @@ export function ManageAppointment({ reference, blockedReason }: ManageAppointmen
   }
 
   return (
-    <section className="rounded-2xl border border-[#dbe3ef] bg-white px-5 py-5 text-sm text-[#53627a] sm:px-7">
+    <section className="rounded-2xl border border-line bg-surface px-5 py-5 text-sm text-ink-muted sm:px-7">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <p className="font-semibold text-[#0a2540]">Plans changed?</p>
+          <p className="font-semibold text-ink">Plans changed?</p>
           <p className="mt-1">Move or cancel this visit online up to 24 hours before it starts.</p>
         </div>
         {mode === "idle" && (
           <div className="flex gap-2">
-            <Button type="button" onClick={startReschedule} className="h-10 rounded-md bg-[#635bff] px-4 text-sm font-bold !text-white shadow-none hover:bg-[#0a2540]">Reschedule</Button>
-            <Button type="button" variant="outline" onClick={() => { setMode("confirm-cancel"); setError(""); }} className="h-10 rounded-md border-[#dbe3ef] px-4 text-sm font-bold text-[#9f3f38]">Cancel visit</Button>
+            <Button type="button" onClick={startReschedule} className="h-10 rounded-md bg-brand px-4 text-sm font-bold !text-white shadow-none hover:bg-night">Reschedule</Button>
+            <Button type="button" variant="outline" onClick={() => { setMode("confirm-cancel"); setError(""); }} className="h-10 rounded-md border-line bg-surface px-4 text-sm font-bold text-danger">Cancel visit</Button>
           </div>
         )}
         {mode === "confirm-cancel" && (
-          <div className="flex items-center gap-2">
-            <span className="font-semibold text-[#0a2540]">Cancel this visit?</span>
-            <Button type="button" onClick={() => submit("cancel")} disabled={submitting} className="h-10 rounded-md bg-[#9f3f38] px-4 text-sm font-bold !text-white shadow-none">{submitting ? "Cancelling…" : "Yes, cancel"}</Button>
-            <Button type="button" variant="outline" onClick={reset} disabled={submitting} className="h-10 rounded-md border-[#dbe3ef] px-4 text-sm font-bold text-[#0a2540]">Keep it</Button>
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="w-full font-semibold text-ink sm:w-auto">Cancel this visit?</span>
+            <Button type="button" onClick={() => submit("cancel")} disabled={submitting} className="h-10 rounded-md bg-danger-fill px-4 text-sm font-bold !text-white shadow-none">{submitting ? "Cancelling…" : "Yes, cancel"}</Button>
+            <Button type="button" variant="outline" onClick={reset} disabled={submitting} className="h-10 rounded-md border-line bg-surface px-4 text-sm font-bold text-ink">Keep it</Button>
           </div>
         )}
       </div>
 
-      {error && <Alert className="mt-4 border-[#f3aaa0] bg-[#fff3f0] text-[#8f3d30]"><AlertDescription>{error}</AlertDescription></Alert>}
+      {error && <Alert className="mt-4 border-danger-line bg-danger-wash text-danger"><AlertDescription>{error}</AlertDescription></Alert>}
 
       {mode === "reschedule" && (
-        <div className="mt-6 border-t border-[#e6ebf1] pt-5">
-          <p className="mb-1 font-bold text-[#0a2540]">Pick a new arrival time</p>
-          <p className="mb-4 text-xs text-[#8898aa]">All times KST · same length, same address</p>
-          {slots === null && <p className="text-xs font-semibold text-[#8898aa]">Checking this week’s available routes…</p>}
+        <div className="mt-6 border-t border-line-soft pt-5">
+          <p className="mb-1 font-bold text-ink">Pick a new arrival time</p>
+          <p className="mb-4 text-xs text-ink-faint">All times KST · same length, same address</p>
+          {slots === null && <p className="text-xs font-semibold text-ink-faint">Checking this week’s available routes…</p>}
           <div className="grid gap-5 sm:grid-cols-2">
             {Object.entries(groupedSlots).map(([dateLabel, dateSlots]) => (
               <div key={dateLabel}>
-                <p className="mb-2 text-sm font-bold text-[#0a2540]">{dateLabel}</p>
-                <div className="grid grid-cols-2 gap-2">
+                <p className="mb-2 text-sm font-bold text-ink">{dateLabel}</p>
+                <div className="grid grid-cols-2 gap-2 min-[360px]:grid-cols-3 sm:grid-cols-2">
                   {dateSlots.map((slot) => (
-                    <button type="button" key={slot.startsAt} onClick={() => { setSelectedStart(slot.startsAt); setError(""); }} className={cn("rounded-md border px-3 py-3 text-sm font-bold", selectedStart === slot.startsAt ? "border-[#635bff] bg-[#635bff] text-white" : "border-[#dbe3ef] bg-white text-[#425466]")}>
+                    <button type="button" key={slot.startsAt} onClick={() => { setSelectedStart(slot.startsAt); setError(""); }} className={cn("whitespace-nowrap rounded-md border px-2 py-3 text-sm font-bold sm:px-3", selectedStart === slot.startsAt ? "border-brand bg-brand text-white" : "border-line bg-surface text-ink-soft")}>
                       {formatSeoulTime(slot.startsAt)}
                     </button>
                   ))}
@@ -125,8 +125,8 @@ export function ManageAppointment({ reference, blockedReason }: ManageAppointmen
             {slots !== null && !slots.length && <p className="text-sm">No other times are open this week.</p>}
           </div>
           <div className="mt-5 flex gap-2">
-            <Button type="button" onClick={() => submit("reschedule")} disabled={submitting || !selectedStart} className="h-10 rounded-md bg-[#635bff] px-4 text-sm font-bold !text-white shadow-none hover:bg-[#0a2540]">{submitting ? "Moving your visit…" : "Move visit →"}</Button>
-            <Button type="button" variant="outline" onClick={reset} disabled={submitting} className="h-10 rounded-md border-[#dbe3ef] px-4 text-sm font-bold text-[#0a2540]">Never mind</Button>
+            <Button type="button" onClick={() => submit("reschedule")} disabled={submitting || !selectedStart} className="h-10 rounded-md bg-brand px-4 text-sm font-bold !text-white shadow-none hover:bg-night">{submitting ? "Moving your visit…" : "Move visit →"}</Button>
+            <Button type="button" variant="outline" onClick={reset} disabled={submitting} className="h-10 rounded-md border-line bg-surface px-4 text-sm font-bold text-ink">Never mind</Button>
           </div>
         </div>
       )}
