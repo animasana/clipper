@@ -1,39 +1,40 @@
 "use client";
 
 import { BookingFlow } from "@/components/clipper/booking-flow";
+import { ThemeToggle } from "@/components/clipper/theme-toggle";
 
 export function PrismaticFlowHome() {
   return (
-    <main className="min-h-screen overflow-hidden bg-[#f7f9fc] text-[#0a2540]">
+    <main className="min-h-screen overflow-hidden bg-page text-ink">
       <div className="relative isolate">
-        <div aria-hidden="true" className="absolute -right-[22rem] -top-[34rem] -z-10 h-[70rem] w-[65rem] rotate-[28deg] bg-[linear-gradient(135deg,#ffdb80_4%,#ff8f70_28%,#d783ff_52%,#7a73ff_72%,#68d5ff_92%)] opacity-90 blur-[2px]" />
+        <div aria-hidden="true" className="absolute -right-[22rem] -top-[34rem] -z-10 h-[70rem] w-[65rem] rotate-[28deg] bg-[linear-gradient(135deg,#ffdb80_4%,#ff8f70_28%,#d783ff_52%,#7a73ff_72%,#68d5ff_92%)] opacity-90 blur-[2px] dark:opacity-35" />
         <header className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-5 py-6 sm:px-8 lg:px-12">
           <a href="#" className="text-2xl font-black tracking-[-0.07em]">clipper</a>
-          <nav className="flex items-center gap-3 sm:gap-6"><a href="/appointments" className="whitespace-nowrap text-sm font-semibold text-[#0a2540] hover:text-[#635bff]">Appointments</a><a href="#book-prism" className="whitespace-nowrap rounded-full bg-[#635bff] px-4 py-2.5 text-sm font-bold !text-white shadow-[0_6px_18px_rgba(99,91,255,.25)] hover:bg-[#0a2540] sm:px-5">Book<span className="max-[359px]:hidden"> a visit</span> ›</a></nav>
+          <nav className="flex items-center gap-3 sm:gap-6"><a href="/appointments" className="whitespace-nowrap text-sm font-semibold text-ink hover:text-brand-text">Appointments</a><ThemeToggle /><a href="#book-prism" className="whitespace-nowrap rounded-full bg-brand px-4 py-2.5 text-sm font-bold !text-white shadow-[0_6px_18px_rgba(99,91,255,.25)] hover:bg-night max-[359px]:hidden sm:px-5">Book<span className="max-[399px]:hidden"> a visit</span> ›</a></nav>
         </header>
 
         <section className="mx-auto grid max-w-7xl items-center gap-12 px-5 pb-16 pt-12 sm:px-8 sm:pb-24 sm:pt-16 lg:min-h-[44rem] lg:grid-cols-[1.08fr_0.92fr] lg:px-12 lg:pb-32 lg:pt-24">
           <div className="relative z-10">
             <h1 className="max-w-4xl text-[clamp(2.75rem,14vw,3.7rem)] font-bold sm:text-[clamp(3.7rem,7.6vw,7.2rem)] leading-[0.93] tracking-[-0.065em]">A calmer way to care for your favorite pet.</h1>
-            <p className="mt-7 max-w-xl text-lg leading-8 text-[#425466]">Clipper coordinates trusted groomers, neighborhood routes, and your pet’s routine—so a full salon arrives at your door exactly when you need it.</p>
-            <div className="mt-9"><a href="#book-prism" className="inline-flex rounded-full bg-[#0a2540] px-6 py-3 text-sm font-bold !text-white hover:bg-[#635bff]">Find a time ›</a></div>
+            <p className="mt-7 max-w-xl text-lg leading-8 text-ink-soft">Clipper coordinates trusted groomers, neighborhood routes, and your pet’s routine—so a full salon arrives at your door exactly when you need it.</p>
+            <div className="mt-9"><a href="#book-prism" className="inline-flex rounded-full bg-night px-6 py-3 text-sm font-bold !text-white hover:bg-brand">Find a time ›</a></div>
           </div>
           {/* Phones stack the two cards in flow; from sm up they float over each other. */}
           <div className="relative sm:min-h-[31rem] lg:min-h-[38rem]">
-            <div className="relative w-[92%] rounded-2xl bg-white/95 p-5 shadow-[0_30px_80px_rgba(50,50,93,.24)] ring-1 ring-[#0a2540]/5 sm:absolute sm:left-[4%] sm:top-[8%] sm:w-[84%] sm:p-6">
-              <div className="flex items-center justify-between gap-3"><div><p className="text-xs font-bold text-[#635bff]">UPCOMING VISIT</p><p className="mt-2 text-2xl font-bold tracking-[-0.04em]">Luna’s Full Groom</p></div><span className="rounded-full bg-[#e7f8f1] px-3 py-1 text-xs font-bold text-[#08775d]">Confirmed</span></div>
-              <div className="mt-6 grid grid-cols-2 gap-4 border-t border-[#e6ebf1] pt-5 text-sm"><Detail label="WHEN" value="Fri, Aug 21 · 10:00" /><Detail label="GROOMER" value="Ava Choi" /><Detail label="NEIGHBORHOOD" value="Hannam-dong" /><Detail label="TOTAL" value="₩95,000" /></div>
+            <div className="relative w-[92%] rounded-2xl bg-surface/95 p-5 shadow-[0_30px_80px_rgba(50,50,93,.24)] ring-1 ring-ink/5 sm:absolute sm:left-[4%] sm:top-[8%] sm:w-[84%] sm:p-6">
+              <div className="flex items-center justify-between gap-3"><div><p className="text-xs font-bold text-brand-text">UPCOMING VISIT</p><p className="mt-2 text-2xl font-bold tracking-[-0.04em]">Luna’s Full Groom</p></div><span className="rounded-full bg-success-wash px-3 py-1 text-xs font-bold text-success">Confirmed</span></div>
+              <div className="mt-6 grid grid-cols-2 gap-4 border-t border-line-soft pt-5 text-sm"><Detail label="WHEN" value="Fri, Aug 21 · 10:00" /><Detail label="GROOMER" value="Ava Choi" /><Detail label="NEIGHBORHOOD" value="Hannam-dong" /><Detail label="TOTAL" value="₩95,000" /></div>
             </div>
-            <div className="relative -mt-4 ml-auto w-[84%] rounded-2xl sm:absolute sm:bottom-[4%] sm:right-0 sm:mt-0 sm:w-[76%] bg-[#0a2540] p-5 text-white shadow-[0_28px_70px_rgba(10,37,64,.32)] sm:p-6"><p className="text-xs font-bold text-[#80e9ff]">ROUTE MATCH</p><div className="mt-4 flex items-center justify-between gap-4"><div><p className="font-bold">Ava → Hannam</p><p className="mt-1 text-sm text-[#adbdcc]">12 min away · supplies packed</p></div><span className="grid size-10 place-items-center rounded-full bg-[#635bff] font-bold">A</span></div><div className="mt-6 h-1.5 overflow-hidden rounded-full bg-white/15"><div className="h-full w-[72%] rounded-full bg-[linear-gradient(90deg,#80e9ff,#d783ff)]" /></div></div>
+            <div className="relative -mt-4 ml-auto w-[84%] rounded-2xl bg-night sm:absolute sm:bottom-[4%] sm:right-0 sm:mt-0 sm:w-[76%] p-5 text-white shadow-[0_28px_70px_rgba(10,37,64,.32)] sm:p-6"><p className="text-xs font-bold text-[#80e9ff]">ROUTE MATCH</p><div className="mt-4 flex items-center justify-between gap-4"><div><p className="font-bold">Ava → Hannam</p><p className="mt-1 text-sm text-[#adbdcc]">12 min away · supplies packed</p></div><span className="grid size-10 place-items-center rounded-full bg-brand font-bold">A</span></div><div className="mt-6 h-1.5 overflow-hidden rounded-full bg-white/15"><div className="h-full w-[72%] rounded-full bg-[linear-gradient(90deg,#80e9ff,#d783ff)]" /></div></div>
           </div>
         </section>
       </div>
 
       <BookingFlow sectionId="book-prism" variant="prism" />
-      <Footer className="border-[#d9e2ec] bg-white text-[#425466]" />
+      <Footer className="border-line bg-surface text-ink-soft" />
     </main>
   );
 }
 
-function Detail({ label, value }: { label: string; value: string }) { return <div><p className="text-[0.6rem] font-bold tracking-[0.14em] text-[#8898aa]">{label}</p><p className="mt-1 font-semibold">{value}</p></div>; }
+function Detail({ label, value }: { label: string; value: string }) { return <div><p className="text-[0.6rem] font-bold tracking-[0.14em] text-ink-faint">{label}</p><p className="mt-1 font-semibold">{value}</p></div>; }
 function Footer({ className }: { className: string }) { return <footer className={`border-t px-5 py-8 sm:px-8 lg:px-12 ${className}`}><div className="mx-auto flex max-w-7xl flex-col gap-3 text-xs font-semibold sm:flex-row sm:items-center sm:justify-between"><span>Clipper · Seoul, 2015</span><span>Thoughtful grooming, coordinated.</span></div></footer>; }

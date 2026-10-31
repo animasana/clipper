@@ -27,6 +27,41 @@
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) + 4px);
+
+  /* Clipper palette. Every value flips under .dark below. */
+  --color-page: var(--page);
+  --color-surface: var(--surface);
+  --color-ink: var(--ink);
+  --color-ink-soft: var(--ink-soft);
+  --color-ink-muted: var(--ink-muted);
+  --color-ink-faint: var(--ink-faint);
+  --color-line: var(--line);
+  --color-line-soft: var(--line-soft);
+  --color-night: var(--night);
+  --color-brand: var(--brand);
+  --color-brand-text: var(--brand-text);
+  --color-brand-wash: var(--brand-wash);
+  --color-success: var(--success);
+  --color-success-wash: var(--success-wash);
+  --color-success-line: var(--success-line);
+  --color-info: var(--info);
+  --color-info-wash: var(--info-wash);
+  --color-info-line: var(--info-line);
+  --color-warn: var(--warn);
+  --color-warn-wash: var(--warn-wash);
+  --color-warn-line: var(--warn-line);
+  --color-danger: var(--danger);
+  --color-danger-wash: var(--danger-wash);
+  --color-danger-line: var(--danger-line);
+  --color-danger-fill: var(--danger-fill);
+  /* Warm palette used by the appointment error and not-found pages. */
+  --color-sand: var(--sand);
+  --color-paper: var(--paper);
+  --color-paper-line: var(--paper-line);
+  --color-charcoal: var(--charcoal);
+  --color-stone: var(--stone);
+  --color-clay: var(--clay);
+  --color-clay-wash: var(--clay-wash);
 }
 
 :root {
@@ -50,6 +85,40 @@
   --border: #e4e4e7;
   --input: #e4e4e7;
   --ring: #a1a1aa;
+
+  --page: #f7f9fc;
+  --surface: #ffffff;
+  --ink: #0a2540;
+  --ink-soft: #425466;
+  --ink-muted: #53627a;
+  --ink-faint: #8898aa;
+  --line: #dbe3ef;
+  --line-soft: #e6ebf1;
+  --night: #0a2540;
+  --brand: #635bff;
+  --brand-text: #635bff;
+  --brand-wash: #eef1ff;
+  --success: #08775d;
+  --success-wash: #e7f8f1;
+  --success-line: #bfe8db;
+  --info: #4353a3;
+  --info-wash: #eef1ff;
+  --info-line: #cbd8ff;
+  --warn: #775d13;
+  --warn-wash: #fff8dc;
+  --warn-line: #e4d5a3;
+  --danger: #9f3f38;
+  --danger-wash: #fff0ef;
+  --danger-line: #f3c4c0;
+  --danger-fill: #9f3f38;
+  --sand: #f7f0e6;
+  --paper: #fffaf3;
+  --paper-line: #ded2c2;
+  --charcoal: #202321;
+  --stone: #766b61;
+  --clay: #b94f3e;
+  --clay-wash: #f4e2d6;
+
   color-scheme: light;
   background: var(--background);
   color: var(--foreground);
@@ -57,26 +126,63 @@
     Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 }
 
+/* shadcn tokens tinted to the Clipper navy so ui/ primitives sit flush on dark surfaces. */
 .dark {
-  --background: #09090b;
-  --foreground: #fafafa;
-  --card: #09090b;
-  --card-foreground: #fafafa;
-  --popover: #09090b;
-  --popover-foreground: #fafafa;
-  --primary: #fafafa;
-  --primary-foreground: #18181b;
-  --secondary: #27272a;
-  --secondary-foreground: #fafafa;
-  --muted: #27272a;
-  --muted-foreground: #a1a1aa;
-  --accent: #27272a;
-  --accent-foreground: #fafafa;
-  --destructive: #7f1d1d;
+  --background: #111d31;
+  --foreground: #e8eef6;
+  --card: #111d31;
+  --card-foreground: #e8eef6;
+  --popover: #111d31;
+  --popover-foreground: #e8eef6;
+  --primary: #e8eef6;
+  --primary-foreground: #0a1424;
+  --secondary: #1b2a43;
+  --secondary-foreground: #e8eef6;
+  --muted: #1b2a43;
+  --muted-foreground: #9aa9bd;
+  --accent: #1b2a43;
+  --accent-foreground: #e8eef6;
+  --destructive: #b8443c;
   --destructive-foreground: #fafafa;
-  --border: #27272a;
-  --input: #27272a;
-  --ring: #71717a;
+  --border: #253552;
+  --input: #253552;
+  --ring: #635bff;
+
+  --page: #0a1424;
+  --surface: #111d31;
+  --ink: #e8eef6;
+  --ink-soft: #b5c2d3;
+  --ink-muted: #9aa9bd;
+  --ink-faint: #7c8ca3;
+  --line: #253552;
+  --line-soft: #1b2a43;
+  --night: #1a3054;
+  /* Fills keep the light brand color so white button text stays readable;
+     brand-colored text gets a lighter tint for contrast on dark surfaces. */
+  --brand: #635bff;
+  --brand-text: #a39dff;
+  --brand-wash: #1f2552;
+  --success: #5fd4ae;
+  --success-wash: #0f2e27;
+  --success-line: #1d5143;
+  --info: #aab6ff;
+  --info-wash: #1f2552;
+  --info-line: #33407a;
+  --warn: #f1cf6b;
+  --warn-wash: #2e2610;
+  --warn-line: #5c4b1b;
+  --danger: #ff9a8f;
+  --danger-wash: #3a1716;
+  --danger-line: #6a2a26;
+  --danger-fill: #b8443c;
+  --sand: #17140f;
+  --paper: #221e18;
+  --paper-line: #3a3329;
+  --charcoal: #f3ece2;
+  --stone: #b3a796;
+  --clay: #e58a76;
+  --clay-wash: #3a221b;
+
   color-scheme: dark;
 }
 
@@ -95,11 +201,11 @@ a {
 }
 
 .clipper-booking--prism {
-  border-block: 1px solid #dbe3ef;
-  background: #f7f9fc;
+  border-block: 1px solid var(--line);
+  background: var(--page);
 }
 
 .clipper-booking--prism > div > div:last-child {
-  border-color: #e2e8f0 !important;
+  border-color: var(--line-soft) !important;
   box-shadow: 0 28px 80px rgb(38 46 77 / 12%) !important;
 }
