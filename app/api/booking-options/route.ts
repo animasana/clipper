@@ -1,5 +1,5 @@
 import { getBookingOptions } from "@/lib/clipper/data";
-import { jsonError } from "@/lib/clipper/http";
+import { jsonError, logError } from "@/lib/clipper/http";
 
 export async function GET() {
   try {
@@ -8,7 +8,7 @@ export async function GET() {
       headers: { "Cache-Control": "public, max-age=300" },
     });
   } catch (error) {
-    console.error("Failed to load booking options", error);
+    logError("failed to load booking options", error);
 
     return jsonError("We could not load booking options.", 500);
   }

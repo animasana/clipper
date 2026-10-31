@@ -1,5 +1,5 @@
 import { getAvailableSlots } from "@/lib/clipper/data";
-import { jsonError } from "@/lib/clipper/http";
+import { jsonError, logError } from "@/lib/clipper/http";
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
@@ -16,7 +16,7 @@ export async function GET(request: Request) {
 
     return Response.json({ slots });
   } catch (error) {
-    console.error("Failed to load availability", error);
+    logError("failed to load availability", error, { neighborhood, packageId });
 
     return jsonError("We could not load availability.", 500);
   }

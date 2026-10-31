@@ -16,8 +16,7 @@ function formatMoney(cents: number) {
 
 export default async function AppointmentsPage() {
   const appointments = await getAppointments();
-  const upcoming = await getAppointments();
-  const upcomingCount = upcoming.filter((appointment) => appointment.status !== "cancelled").length;
+  const upcomingCount = appointments.filter((appointment) => appointment.status !== "cancelled").length;
 
   return (
     <main className="min-h-screen bg-page text-ink">
