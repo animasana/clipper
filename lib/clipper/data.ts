@@ -2,10 +2,14 @@ import {
   and,
   desc,
   eq,
+  exists,
   gt,
+  inArray,
   lt,
   ne,
+  notExists,
 } from "drizzle-orm";
+import { alias } from "drizzle-orm/sqlite-core";
 
 import {
   type Appointment,
@@ -16,6 +20,7 @@ import {
   groomingPackages,
 } from "@/db/schema";
 
+import { CHANGEABLE_STATUSES } from "./changes";
 import { getDatabase } from "./db";
 import {
   addDays,
@@ -174,6 +179,112 @@ export async function findAvailableGroomer(
   const candidates = groomersCovering(schedules, start.time, end.time);
 
   return pickFreeGroomer(candidates, busy, startsAt, endsAt, preferredGroomerId);
+}
+
+// Matching a groomer and writing the visit are separate round trips, so two
+// requests can pick the same free groomer. Each write below re-checks the
+// groomer inside the write itself and fails instead of double-booking; the
+// caller then matches again, seeing the visit that won.
+const GROOMER_CLAIM_ATTEMPTS = 3;
+
+/**
+ * Inserts `values` with a free groomer. Returns the groomer's id, or null
+ * when no groomer is free.
+ */
+export async function createAppointmentWithFreeGroomer(
+  values: Omit<typeof appointments.$inferInsert, "groomerId">,
+): Promise<string | null> {
+  for (let attempt = 0; attempt < GROOMER_CLAIM_ATTEMPTS; attempt++) {
+    const groomerId = await findAvailableGroomer(
+      values.neighborhood,
+      values.startsAt,
+      values.endsAt,
+    );
+    if (!groomerId) return null;
+
+    const db = getDatabase();
+    // A D1 batch is one transaction: the row is removed again if the groomer
+    // already had an overlapping visit by the time it was written.
+    const [, , kept] = await db.batch([
+      db.insert(appointments).values({ ...values, groomerId }),
+      db
+        .delete(appointments)
+        .where(
+          and(
+            eq(appointments.id, values.id),
+            exists(
+              groomerOverlapQuery(
+                db,
+                groomerId,
+                values.startsAt,
+                values.endsAt,
+                values.id,
+              ),
+            ),
+          ),
+        ),
+      db
+        .select({ id: appointments.id })
+        .from(appointments)
+        .where(eq(appointments.id, values.id)),
+    ]);
+    if (kept.length > 0) return groomerId;
+  }
+
+  return null;
+}
+
+/**
+ * Moves `appointment` to `startsAt`–`endsAt`, keeping its groomer when free.
+ * "changed" means the visit's status or time changed since it was read.
+ */
+export async function moveAppointmentToFreeGroomer(
+  appointment: Appointment,
+  startsAt: Date,
+  endsAt: Date,
+): Promise<"moved" | "no-groomer" | "changed"> {
+  for (let attempt = 0; attempt < GROOMER_CLAIM_ATTEMPTS; attempt++) {
+    const groomerId = await findAvailableGroomer(
+      appointment.neighborhood,
+      startsAt,
+      endsAt,
+      {
+        excludeAppointmentId: appointment.id,
+        preferredGroomerId: appointment.groomerId,
+      },
+    );
+    if (!groomerId) return "no-groomer";
+
+    const db = getDatabase();
+    // One UPDATE: guarded on the status and time we checked, and on the
+    // groomer still being free.
+    const updated = await db
+      .update(appointments)
+      .set({ startsAt, endsAt, groomerId, updatedAt: new Date() })
+      .where(
+        and(
+          eq(appointments.id, appointment.id),
+          eq(appointments.startsAt, appointment.startsAt),
+          inArray(appointments.status, CHANGEABLE_STATUSES),
+          notExists(
+            groomerOverlapQuery(db, groomerId, startsAt, endsAt, appointment.id),
+          ),
+        ),
+      )
+      .returning({ id: appointments.id });
+    if (updated.length > 0) return "moved";
+
+    const current = await getAppointmentRow(appointment.bookingReference);
+    if (
+      !current ||
+      current.status !== appointment.status ||
+      current.startsAt.getTime() !== appointment.startsAt.getTime()
+    ) {
+      return "changed";
+    }
+  }
+
+  return "no-groomer";
 }
 
 const SLOT_DAYS_AHEAD = 7;
@@ -363,6 +474,32 @@ function neighborhoodBusyIntervalsQuery(
         excludeAppointmentId === undefined
           ? undefined
           : ne(appointments.id, excludeAppointmentId),
+      ),
+    );
+}
+
+/**
+ * `groomerId`'s non-cancelled appointments overlapping `startsAt`–`endsAt`,
+ * other than `excludeAppointmentId`. Used as an EXISTS subquery in writes.
+ */
+function groomerOverlapQuery(
+  db: Database,
+  groomerId: string,
+  startsAt: Date,
+  endsAt: Date,
+  excludeAppointmentId: string,
+) {
+  const other = alias(appointments, "other");
+  return db
+    .select({ id: other.id })
+    .from(other)
+    .where(
+      and(
+        eq(other.groomerId, groomerId),
+        ne(other.status, "cancelled"),
+        lt(other.startsAt, endsAt),
+        gt(other.endsAt, startsAt),
+        ne(other.id, excludeAppointmentId),
       ),
     );
 }
