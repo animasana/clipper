@@ -1,7 +1,7 @@
 import { eq } from "drizzle-orm";
 
 import { groomingPackages } from "@/db/schema";
-import { ADDRESS_DETAIL_MAX, addressDetailNote } from "@/lib/clipper/booking";
+import { ADDRESS_DETAIL_MAX } from "@/lib/clipper/booking";
 import { createAppointmentWithFreeGroomer } from "@/lib/clipper/data";
 import { getDatabase } from "@/lib/clipper/db";
 import { jsonError, logError, logEvent } from "@/lib/clipper/http";
@@ -61,8 +61,8 @@ export async function POST(request: Request) {
   if (input.addressDetail !== undefined && typeof input.addressDetail !== "string") {
     return jsonError("addressDetail must be a string.", 400);
   }
-  const addressDetail = input.addressDetail ?? "";
-  if (addressDetail.trim().length > ADDRESS_DETAIL_MAX) {
+  const addressDetail = (input.addressDetail ?? "").trim();
+  if (addressDetail.length > ADDRESS_DETAIL_MAX) {
     return jsonError(`Keep the apt, floor, or gate code under ${ADDRESS_DETAIL_MAX} characters.`, 400);
   }
 
@@ -97,7 +97,7 @@ export async function POST(request: Request) {
       endsAt,
       status: "confirmed",
       priceCents: groomingPackage.priceCents,
-      notes: addressDetailNote(addressDetail),
+      notes: addressDetail ? `Apt, floor, or gate: ${addressDetail}` : null,
       createdAt: now,
       updatedAt: now,
     });

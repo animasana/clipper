@@ -119,7 +119,7 @@ export function BookingFlow({ sectionId = "book", variant = "prism", theme = { i
     fetch("/api/bookings", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ petName: petName.trim(), petBreed, packageId: selectedPackageId, neighborhood: selectedNeighborhood, address, addressDetail: addressDetail.trim(), startsAt: selectedSlot.startsAt }),
+      body: JSON.stringify({ petName: petName.trim(), petBreed, packageId: selectedPackageId, neighborhood: selectedNeighborhood, address, addressDetail, startsAt: selectedSlot.startsAt }),
     })
       .then((response) => {
         if (!response.ok) throw new Error("Could not create booking");
