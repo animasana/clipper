@@ -52,6 +52,10 @@ export function BookingFlow({ sectionId = "book", variant = "prism", theme = { i
   const [loadingOptions, setLoadingOptions] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState("");
+  // Availability request failed (network/5xx) — distinct from "no open times".
+  const [slotsError, setSlotsError] = useState(false);
+  // Bumped by "Try again" to refetch availability for the same selection.
+  const [slotsAttempt, setSlotsAttempt] = useState(0);
 
   const slots = slotState ?? [];
   const loadingSlots = slotState === null;
@@ -95,17 +99,20 @@ export function BookingFlow({ sectionId = "book", variant = "prism", theme = { i
     }
     let cancelled = false;
     setSlotState(null);
+    setSlotsError(false);
     const params = new URLSearchParams({ neighborhood: selectedNeighborhood, packageId: selectedPackageId });
     fetchJson<{ slots: AvailableSlot[] }>(`/api/availability?${params}`)
       .then((data) => {
         if (!cancelled) setSlotState(data.slots.map(toSlotOption));
       })
       .catch(() => {
-        // Never offer unverified times; the empty-slots message covers this.
-        if (!cancelled) setSlotState([]);
+        // Never offer unverified times, but say the lookup failed rather than "no routes".
+        if (cancelled) return;
+        setSlotState([]);
+        setSlotsError(true);
       });
     return () => { cancelled = true; };
-  }, [selectedNeighborhood, selectedPackageId]);
+  }, [selectedNeighborhood, selectedPackageId, slotsAttempt]);
 
   function validateAndSubmit() {
     if (!petName.trim() || !petBreed || !selectedPackageId || !selectedNeighborhood || !address || !selectedSlot) {
@@ -174,7 +181,7 @@ export function BookingFlow({ sectionId = "book", variant = "prism", theme = { i
                 <fieldset>
                   <legend className="mb-1 text-lg font-bold tracking-[-0.025em]" style={{ color: ink }}>4. Pick an arrival time</legend>
                   <p className="mb-4 text-xs text-ink-faint">All times KST · matched against live groomer routes</p>
-                  <div className="grid gap-5 sm:grid-cols-2">{Object.entries(groupedSlots).map(([dateKey, dateSlots]) => <div key={dateKey}><p className="mb-2 text-sm font-bold" style={{ color: ink }}>{dateSlots[0]?.dateLabel}</p><div className="grid grid-cols-2 gap-2 min-[360px]:grid-cols-3 sm:grid-cols-2">{dateSlots.map((slot) => <button type="button" key={slot.startsAt} onClick={() => { setSelectedSlotStart(slot.startsAt); setFormError(""); }} className={cn("whitespace-nowrap rounded-md border px-2 py-3 text-sm font-bold sm:px-3", selectedSlot?.startsAt === slot.startsAt ? "text-white" : "border-line bg-surface text-ink-soft")} style={selectedSlot?.startsAt === slot.startsAt ? { background: accent, borderColor: accent } : undefined}>{slot.timeLabel}</button>)}</div></div>)}{!loadingSlots && !slots.length && <p className="text-sm text-ink-muted">No routes are open for this address yet.</p>}</div>
+                  <div className="grid gap-5 sm:grid-cols-2">{Object.entries(groupedSlots).map(([dateKey, dateSlots]) => <div key={dateKey}><p className="mb-2 text-sm font-bold" style={{ color: ink }}>{dateSlots[0]?.dateLabel}</p><div className="grid grid-cols-2 gap-2 min-[360px]:grid-cols-3 sm:grid-cols-2">{dateSlots.map((slot) => <button type="button" key={slot.startsAt} onClick={() => { setSelectedSlotStart(slot.startsAt); setFormError(""); }} className={cn("whitespace-nowrap rounded-md border px-2 py-3 text-sm font-bold sm:px-3", selectedSlot?.startsAt === slot.startsAt ? "text-white" : "border-line bg-surface text-ink-soft")} style={selectedSlot?.startsAt === slot.startsAt ? { background: accent, borderColor: accent } : undefined}>{slot.timeLabel}</button>)}</div></div>)}{slotsError ? <div role="alert" className="flex flex-wrap items-center gap-3 rounded-md border border-danger-line bg-danger-wash px-4 py-3 text-sm text-danger sm:col-span-2"><span className="font-semibold">We couldn’t load open times.</span><button type="button" onClick={() => setSlotsAttempt((attempt) => attempt + 1)} className="rounded-md border border-danger-line bg-surface px-3 py-1.5 text-sm font-bold text-danger hover:bg-danger-wash">Try again</button></div> : !loadingSlots && !slots.length && <p className="text-sm text-ink-muted">No routes are open for this address yet.</p>}</div>
                 </fieldset>
               </div>
 
