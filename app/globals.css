@@ -193,19 +193,3 @@ body {
 a {
   color: inherit;
 }
-
-/* Temporary ui.sh comparison variants. Remove after a direction is selected. */
-.clipper-booking--prism {
-  max-width: none;
-  padding-top: 5rem;
-}
-
-.clipper-booking--prism {
-  border-block: 1px solid var(--line);
-  background: var(--page);
-}
-
-.clipper-booking--prism > div > div:last-child {
-  border-color: var(--line-soft) !important;
-  box-shadow: 0 28px 80px rgb(38 46 77 / 12%) !important;
-}
