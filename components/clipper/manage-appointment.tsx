@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { Alert, AlertDescription, Button } from "@/components/ui";
 import { formatSeoulDate, formatSeoulTime } from "@/lib/clipper/time";
@@ -29,6 +29,29 @@ export function ManageAppointment({ reference, blockedReason }: ManageAppointmen
   const [selectedStart, setSelectedStart] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
+  // Each mode swap unmounts the focused button, so focus is moved by hand.
+  const openerRef = useRef<"reschedule" | "cancel" | null>(null);
+  const rescheduleButtonRef = useRef<HTMLButtonElement>(null);
+  const cancelButtonRef = useRef<HTMLButtonElement>(null);
+  const keepButtonRef = useRef<HTMLButtonElement>(null);
+  const rescheduleHeadingRef = useRef<HTMLParagraphElement>(null);
+  const errorRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (mode === "confirm-cancel") {
+      // The safe choice, so a stray Enter doesn't cancel the visit.
+      keepButtonRef.current?.focus();
+    } else if (mode === "reschedule") {
+      rescheduleHeadingRef.current?.focus();
+    } else if (openerRef.current) {
+      (openerRef.current === "cancel" ? cancelButtonRef : rescheduleButtonRef).current?.focus();
+      openerRef.current = null;
+    }
+  }, [mode]);
+
+  useEffect(() => {
+    if (error) errorRef.current?.focus();
+  }, [error]);
 
   const basePath = `/api/appointments/${encodeURIComponent(reference)}`;
   // Date labels are unique within the 7-day window, so they double as group keys.
@@ -48,6 +71,7 @@ export function ManageAppointment({ reference, blockedReason }: ManageAppointmen
   }
 
   function startReschedule() {
+    openerRef.current = "reschedule";
     setMode("reschedule");
     setError("");
     setSlots(null);
@@ -89,24 +113,24 @@ export function ManageAppointment({ reference, blockedReason }: ManageAppointmen
         </div>
         {mode === "idle" && (
           <div className="flex gap-2">
-            <Button type="button" onClick={startReschedule} className="h-10 rounded-md bg-brand px-4 text-sm font-bold !text-white shadow-none hover:bg-night">Reschedule</Button>
-            <Button type="button" variant="outline" onClick={() => { setMode("confirm-cancel"); setError(""); }} className="h-10 rounded-md border-line bg-surface px-4 text-sm font-bold text-danger">Cancel visit</Button>
+            <Button ref={rescheduleButtonRef} type="button" onClick={startReschedule} className="h-10 rounded-md bg-brand px-4 text-sm font-bold !text-white shadow-none hover:bg-night">Reschedule</Button>
+            <Button ref={cancelButtonRef} type="button" variant="outline" onClick={() => { openerRef.current = "cancel"; setMode("confirm-cancel"); setError(""); }} className="h-10 rounded-md border-line bg-surface px-4 text-sm font-bold text-danger">Cancel visit</Button>
           </div>
         )}
         {mode === "confirm-cancel" && (
           <div className="flex flex-wrap items-center gap-2">
             <span className="w-full font-semibold text-ink sm:w-auto">Cancel this visit?</span>
             <Button type="button" onClick={() => submit("cancel")} disabled={submitting} className="h-10 rounded-md bg-danger-fill px-4 text-sm font-bold !text-white shadow-none">{submitting ? "Cancelling…" : "Yes, cancel"}</Button>
-            <Button type="button" variant="outline" onClick={reset} disabled={submitting} className="h-10 rounded-md border-line bg-surface px-4 text-sm font-bold text-ink">Keep it</Button>
+            <Button ref={keepButtonRef} type="button" variant="outline" onClick={reset} disabled={submitting} className="h-10 rounded-md border-line bg-surface px-4 text-sm font-bold text-ink">Keep it</Button>
           </div>
         )}
       </div>
 
-      {error && <Alert className="mt-4 border-danger-line bg-danger-wash text-danger"><AlertDescription>{error}</AlertDescription></Alert>}
+      {error && <Alert ref={errorRef} tabIndex={-1} className="mt-4 border-danger-line bg-danger-wash text-danger outline-none"><AlertDescription>{error}</AlertDescription></Alert>}
 
       {mode === "reschedule" && (
         <div className="mt-6 border-t border-line-soft pt-5">
-          <p className="mb-1 font-bold text-ink">Pick a new arrival time</p>
+          <p ref={rescheduleHeadingRef} tabIndex={-1} className="mb-1 font-bold text-ink outline-none">Pick a new arrival time</p>
           <p className="mb-4 text-xs text-ink-faint">All times KST · same length, same address</p>
           {slots === null && <p className="text-xs font-semibold text-ink-faint">Checking this week’s available routes…</p>}
           <div className="grid gap-5 sm:grid-cols-2">
