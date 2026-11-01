@@ -59,6 +59,10 @@ export function BookingFlow({ sectionId = "book", variant = "prism", theme = { i
   const selectedPackage = options.packages.find((pkg) => pkg.id === selectedPackageId);
   const totalPrice = selectedPackage?.priceCents ?? 0;
   const durationMinutes = selectedPackage?.durationMinutes ?? 0;
+  // Longest package that is still shorter than the current one: the empty state suggests it.
+  const shorterPackage = options.packages
+    .filter((pkg) => pkg.durationMinutes < durationMinutes)
+    .sort((a, b) => b.durationMinutes - a.durationMinutes)[0];
   // Date labels are unique within the 7-day window, so they double as group keys.
   const groupedSlots = slots.reduce<Record<string, SlotOption[]>>((groups, slot) => {
     groups[slot.dateLabel] = [...(groups[slot.dateLabel] ?? []), slot];
@@ -153,7 +157,6 @@ export function BookingFlow({ sectionId = "book", variant = "prism", theme = { i
             <div className={cn("grid", prism ? "lg:grid-cols-[minmax(0,1fr)_20rem]" : "lg:grid-cols-[minmax(0,1fr)_19rem]")}>
               <div className="space-y-10 p-5 sm:p-8 lg:p-10">
                 {formError && <Alert className="border-danger-line bg-danger-wash text-danger"><AlertDescription>{formError}</AlertDescription></Alert>}
-                {loading && <p className="text-xs font-semibold text-ink-faint">Checking this week’s available routes…</p>}
 
                 <fieldset>
                   <legend className="mb-4 text-lg font-bold tracking-[-0.025em]" style={{ color: ink }}>1. Who are we grooming?</legend>
@@ -174,7 +177,23 @@ export function BookingFlow({ sectionId = "book", variant = "prism", theme = { i
                 <fieldset>
                   <legend className="mb-1 text-lg font-bold tracking-[-0.025em]" style={{ color: ink }}>4. Pick an arrival time</legend>
                   <p className="mb-4 text-xs text-ink-faint">All times KST · matched against live groomer routes</p>
-                  <div className="grid gap-5 sm:grid-cols-2">{Object.entries(groupedSlots).map(([dateKey, dateSlots]) => <div key={dateKey}><p className="mb-2 text-sm font-bold" style={{ color: ink }}>{dateSlots[0]?.dateLabel}</p><div className="grid grid-cols-2 gap-2 min-[360px]:grid-cols-3 sm:grid-cols-2">{dateSlots.map((slot) => <button type="button" key={slot.startsAt} onClick={() => { setSelectedSlotStart(slot.startsAt); setFormError(""); }} className={cn("whitespace-nowrap rounded-md border px-2 py-3 text-sm font-bold sm:px-3", selectedSlot?.startsAt === slot.startsAt ? "text-white" : "border-line bg-surface text-ink-soft")} style={selectedSlot?.startsAt === slot.startsAt ? { background: accent, borderColor: accent } : undefined}>{slot.timeLabel}</button>)}</div></div>)}{!loadingSlots && !slots.length && <p className="text-sm text-ink-muted">No routes are open for this address yet.</p>}</div>
+                  {/* Polite live region so screen readers hear loading / empty results as the selection changes. */}
+                  <div aria-live="polite" className="text-sm text-ink-muted">
+                    {!selectedNeighborhood ? (
+                      <p>Choose a neighborhood in step 3 to see open times.</p>
+                    ) : loadingSlots ? (
+                      <div><span className="sr-only">Checking this week’s available routes…</span><div aria-hidden="true" className="grid grid-cols-2 gap-2 min-[360px]:grid-cols-3 sm:grid-cols-4">{Array.from({ length: 8 }, (_, index) => <div key={index} className="h-11 animate-pulse rounded-md bg-line-soft" />)}</div></div>
+                    ) : !slots.length ? (
+                      <div className="rounded-md border border-line bg-page px-4 py-4">
+                        <p className="font-semibold text-ink">No openings in {selectedNeighborhood} for {selectedPackage?.name ?? "this service"} this week.</p>
+                        <p className="mt-1">
+                          {shorterPackage ? <>A shorter visit may fit: <button type="button" onClick={() => { setSelectedPackageId(shorterPackage.id); setFormError(""); }} className="font-bold text-brand-text underline-offset-2 hover:underline">try {shorterPackage.name} ({shorterPackage.durationMinutes} min)</button>, or call </> : <>Call </>}
+                          <a href="tel:+8225550142" className="font-bold text-brand-text underline-offset-2 hover:underline">02-555-0142</a> and we’ll find a time.
+                        </p>
+                      </div>
+                    ) : null}
+                  </div>
+                  <div className="grid gap-5 sm:grid-cols-2">{Object.entries(groupedSlots).map(([dateKey, dateSlots]) => <div key={dateKey}><p className="mb-2 text-sm font-bold" style={{ color: ink }}>{dateSlots[0]?.dateLabel}</p><div className="grid grid-cols-2 gap-2 min-[360px]:grid-cols-3 sm:grid-cols-2">{dateSlots.map((slot) => <button type="button" key={slot.startsAt} onClick={() => { setSelectedSlotStart(slot.startsAt); setFormError(""); }} className={cn("whitespace-nowrap rounded-md border px-2 py-3 text-sm font-bold sm:px-3", selectedSlot?.startsAt === slot.startsAt ? "text-white" : "border-line bg-surface text-ink-soft")} style={selectedSlot?.startsAt === slot.startsAt ? { background: accent, borderColor: accent } : undefined}>{slot.timeLabel}</button>)}</div></div>)}</div>
                 </fieldset>
               </div>
 
@@ -185,7 +204,7 @@ export function BookingFlow({ sectionId = "book", variant = "prism", theme = { i
                   <p className="mt-1 text-sm text-ink-muted">{selectedPackage?.name ?? "Choose a service"}</p>
                   <dl className="mt-7 space-y-4 border-y border-line py-5 text-sm"><div className="flex justify-between gap-3"><dt className="text-ink-faint">Arrival</dt><dd className="text-right font-semibold" style={{ color: ink }}>{selectedSlot ? `${selectedSlot.dateLabel}, ${selectedSlot.timeLabel}` : "Not selected"}</dd></div><div className="flex justify-between"><dt className="text-ink-faint">Duration</dt><dd className="font-semibold" style={{ color: ink }}>{durationMinutes} min</dd></div><div className="flex justify-between"><dt className="text-ink-faint">Neighborhood</dt><dd className="font-semibold" style={{ color: ink }}>{selectedNeighborhood || "Not selected"}</dd></div></dl>
                   <div className="my-6 flex items-end justify-between"><span className="text-sm font-semibold text-ink-muted">Total</span><span className="text-3xl font-bold tracking-[-0.05em]" style={{ color: ink }}>{formatMoney(totalPrice)}</span></div>
-                  <Button type="button" onClick={validateAndSubmit} disabled={submitting || loading} className="h-12 w-full rounded-md text-sm font-bold !text-white shadow-none" style={{ background: accent }}>{submitting ? "Saving your spot…" : "Confirm visit →"}</Button>
+                  <Button type="button" onClick={validateAndSubmit} disabled={submitting || loading} className="h-12 w-full rounded-md text-sm font-bold !text-white shadow-none" style={{ background: accent }}>{submitting ? "Saving your spot…" : loading ? "Loading open times…" : "Confirm visit →"}</Button>
                   <p className="mt-3 text-center text-[0.68rem] leading-5 text-ink-faint">No charge until your groomer is confirmed.</p>
                 </div>
               </aside>
