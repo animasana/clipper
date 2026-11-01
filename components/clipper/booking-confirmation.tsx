@@ -1,9 +1,7 @@
-import Check from "lucide-react/icons/check";
 import Heart from "lucide-react/icons/heart";
 import Sparkles from "lucide-react/icons/sparkles";
-import X from "lucide-react/icons/x";
-import Link from "next/link";
 
+import { statusDisplay } from "@/lib/clipper/status";
 import { formatSeoulDate } from "@/lib/clipper/time";
 import type { AppointmentDetails } from "@/lib/clipper/types";
 
@@ -19,17 +17,10 @@ type ConfirmationDetails = {
   pet?: { name?: string | null } | null;
 };
 
-const statusLabels: Record<string, string> = {
-  confirmed: "Confirmed",
-  completed: "Completed",
-  cancelled: "Cancelled",
-  pending: "Pending",
-};
-
 export function BookingConfirmation({ appointment }: BookingConfirmationProps) {
   const details = appointment as unknown as ConfirmationDetails;
   const petName = details.pet?.name ?? "your pet";
-  const status = statusLabels[details.status ?? ""] ?? "Booked";
+  const status = statusDisplay(details.status);
   const isCancelled = details.status === "cancelled";
   const visitDay = formatSeoulDate(details.startsAt, "long") ?? "your chosen day";
 
@@ -37,10 +28,10 @@ export function BookingConfirmation({ appointment }: BookingConfirmationProps) {
     <section className="relative overflow-hidden rounded-2xl bg-night px-5 py-8 text-white shadow-[0_28px_80px_rgba(10,37,64,0.24)] sm:px-8 sm:py-10">
       <div className="relative max-w-xl">
         <div className="mb-6 flex size-12 items-center justify-center rounded-full bg-white text-brand shadow-sm">
-          {isCancelled ? <X aria-hidden="true" className="size-6" strokeWidth={3} /> : <Check aria-hidden="true" className="size-6" strokeWidth={3} />}
+          <status.Icon aria-hidden="true" className="size-6" strokeWidth={3} />
         </div>
         <p className="mb-2 flex items-center gap-2 text-[11px] font-bold uppercase tracking-[0.22em] text-[#80e9ff]">
-          <Sparkles aria-hidden="true" className="size-3.5" /> {status}
+          <Sparkles aria-hidden="true" className="size-3.5" /> {status.label}
         </p>
         <h1 className="max-w-lg text-4xl font-bold leading-[0.98] tracking-[-0.055em] sm:text-6xl">
           {isCancelled ? `${petName}’s visit is cancelled.` : `${petName} is on the books.`}
