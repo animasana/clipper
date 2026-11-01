@@ -30,17 +30,13 @@ async function fetchJson<T>(url: string): Promise<T> {
   return response.json() as Promise<T>;
 }
 
-const fallbackOptions: BookingOption = {
-  packages: [
-    { id: "pkg_bath_brush", name: "Bath & Brush", description: "A refreshing bath, blow dry, brush-out, and nail trim.", durationMinutes: 60, priceCents: 65000 },
-    { id: "pkg_full_groom", name: "Full Groom", description: "Bath, brush-out, haircut, nail trim, and ear cleaning.", durationMinutes: 90, priceCents: 95000 },
-    { id: "pkg_deluxe", name: "Deluxe Spa", description: "Full grooming plus teeth brushing and a soothing paw treatment.", durationMinutes: 120, priceCents: 135000 },
-  ],
-  neighborhoods: ["Hannam-dong", "Yeonnam-dong", "Seongsu-dong", "Itaewon", "Gangnam", "Mangwon-dong"],
-};
-
 export function BookingFlow({ sectionId = "book", variant = "prism", theme = { ink: "var(--ink)", accent: "var(--brand)" } }: { sectionId?: string; variant?: "prism"; theme?: { ink: string; accent: string } }) {
-  const [options, setOptions] = useState<BookingOption>(fallbackOptions);
+  // The catalog only ever comes from the API: a client-side copy could show stale prices.
+  // null until it loads (or while retrying after an error).
+  const [options, setOptions] = useState<BookingOption | null>(null);
+  const [optionsError, setOptionsError] = useState(false);
+  // Bumped by "Try again" to refetch the catalog.
+  const [optionsAttempt, setOptionsAttempt] = useState(0);
   // null while availability for the current selection is loading.
   const [slotState, setSlotState] = useState<SlotOption[] | null>(null);
   const [petName, setPetName] = useState("Luna");
@@ -49,14 +45,13 @@ export function BookingFlow({ sectionId = "book", variant = "prism", theme = { i
   const [selectedNeighborhood, setSelectedNeighborhood] = useState("Itaewon");
   const [address, setAddress] = useState("42 Itaewon-ro 27ga-gil");
   const [selectedSlotStart, setSelectedSlotStart] = useState("");
-  const [loadingOptions, setLoadingOptions] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState("");
 
   const slots = slotState ?? [];
   const loadingSlots = slotState === null;
-  const loading = loadingOptions || loadingSlots;
-  const selectedPackage = options.packages.find((pkg) => pkg.id === selectedPackageId);
+  const loading = !options || loadingSlots;
+  const selectedPackage = options?.packages.find((pkg) => pkg.id === selectedPackageId);
   const totalPrice = selectedPackage?.priceCents ?? 0;
   const durationMinutes = selectedPackage?.durationMinutes ?? 0;
   // Date labels are unique within the 7-day window, so they double as group keys.
@@ -67,25 +62,24 @@ export function BookingFlow({ sectionId = "book", variant = "prism", theme = { i
   // Keep the customer's pick while it's still offered; otherwise default to the earliest slot.
   const selectedSlot = slots.find((slot) => slot.startsAt === selectedSlotStart) ?? slots[0];
 
-  // Catalog (packages + neighborhoods) is static: load it once.
+  // Catalog (packages + neighborhoods) is static: load it once (again only on "Try again").
   useEffect(() => {
     let cancelled = false;
+    setOptionsError(false);
     fetchJson<BookingOption>("/api/booking-options")
       .then((data) => {
         if (cancelled) return;
-        setOptions({
-          packages: data.packages.length ? data.packages : fallbackOptions.packages,
-          neighborhoods: data.neighborhoods.length ? data.neighborhoods : fallbackOptions.neighborhoods,
-        });
+        // An empty catalog can't be booked against; treat it like a failed load.
+        if (!data.packages.length || !data.neighborhoods.length) throw new Error("Empty booking catalog");
+        setOptions(data);
+        // Keep the default package only if the live catalog still offers it.
+        setSelectedPackageId((current) => (data.packages.some((pkg) => pkg.id === current) ? current : data.packages[0].id));
       })
       .catch(() => {
-        // Keep the local booking options available when the API is offline.
-      })
-      .finally(() => {
-        if (!cancelled) setLoadingOptions(false);
+        if (!cancelled) setOptionsError(true);
       });
     return () => { cancelled = true; };
-  }, []);
+  }, [optionsAttempt]);
 
   // Availability depends on the selection: refetch whenever it changes.
   useEffect(() => {
@@ -160,6 +154,17 @@ export function BookingFlow({ sectionId = "book", variant = "prism", theme = { i
                   <div className="grid gap-3 sm:grid-cols-2"><label className="text-xs font-bold text-ink-muted">Pet name<Input aria-label="Pet name" value={petName} onChange={(event) => setPetName(event.target.value)} placeholder="e.g. Luna" className="mt-2 h-12 rounded-md border-line bg-surface px-4 text-base font-normal text-ink focus-visible:ring-brand" /></label><label className="text-xs font-bold text-ink-muted">Breed<select aria-label="Breed" value={petBreed} onChange={(event) => setPetBreed(event.target.value)} className="mt-2 h-12 w-full rounded-md border border-line bg-surface px-4 text-base font-normal text-ink outline-none focus:border-brand"><option value="">Choose a breed</option><option>Golden Retriever</option><option>Labrador Retriever</option><option>French Bulldog</option><option>German Shepherd</option><option>Poodle</option><option>Miniature Poodle</option><option>Pomeranian</option><option>Shiba Inu</option><option>Welsh Corgi</option><option>Yorkshire Terrier</option><option>Mixed Breed</option></select></label></div>
                 </fieldset>
 
+                {!options ? (
+                  optionsError ? (
+                    <div role="alert" className="rounded-md border border-danger-line bg-danger-wash px-5 py-5 text-sm text-danger">
+                      <p className="font-semibold">We couldn’t load our services and neighborhoods.</p>
+                      <p className="mt-1">Booking needs the live price list. Check your connection and try again.</p>
+                      <button type="button" onClick={() => setOptionsAttempt((attempt) => attempt + 1)} className="mt-4 rounded-md border border-danger-line bg-surface px-4 py-2 font-bold">Try again</button>
+                    </div>
+                  ) : (
+                    <div aria-hidden="true" className="space-y-4">{Array.from({ length: 3 }, (_, index) => <div key={index} className="h-16 animate-pulse rounded-md bg-line-soft" />)}</div>
+                  )
+                ) : (<>
                 <fieldset>
                   <legend className="mb-4 text-lg font-bold tracking-[-0.025em]" style={{ color: ink }}>2. Choose a service</legend>
                   <div className="divide-y divide-line-soft border-y border-line-soft">{options.packages.map((pkg) => <button type="button" key={pkg.id} onClick={() => { setSelectedPackageId(pkg.id); setFormError(""); }} className={cn("grid w-full grid-cols-[1fr_auto] items-center gap-5 px-1 py-5 text-left", selectedPackageId === pkg.id ? "" : "opacity-70 hover:opacity-100")}><span><span className="flex items-center gap-2 font-bold" style={{ color: ink }}><span className="size-2 rounded-full" style={{ background: selectedPackageId === pkg.id ? accent : "var(--line)" }} />{pkg.name}</span><span className="mt-1 block pl-4 text-xs leading-5 text-ink-faint">{pkg.description}</span></span><span className="text-right"><span className="block font-bold" style={{ color: ink }}>{formatMoney(pkg.priceCents)}</span><span className="text-xs text-ink-faint">{pkg.durationMinutes} min</span></span></button>)}</div>
@@ -176,6 +181,7 @@ export function BookingFlow({ sectionId = "book", variant = "prism", theme = { i
                   <p className="mb-4 text-xs text-ink-faint">All times KST · matched against live groomer routes</p>
                   <div className="grid gap-5 sm:grid-cols-2">{Object.entries(groupedSlots).map(([dateKey, dateSlots]) => <div key={dateKey}><p className="mb-2 text-sm font-bold" style={{ color: ink }}>{dateSlots[0]?.dateLabel}</p><div className="grid grid-cols-2 gap-2 min-[360px]:grid-cols-3 sm:grid-cols-2">{dateSlots.map((slot) => <button type="button" key={slot.startsAt} onClick={() => { setSelectedSlotStart(slot.startsAt); setFormError(""); }} className={cn("whitespace-nowrap rounded-md border px-2 py-3 text-sm font-bold sm:px-3", selectedSlot?.startsAt === slot.startsAt ? "text-white" : "border-line bg-surface text-ink-soft")} style={selectedSlot?.startsAt === slot.startsAt ? { background: accent, borderColor: accent } : undefined}>{slot.timeLabel}</button>)}</div></div>)}{!loadingSlots && !slots.length && <p className="text-sm text-ink-muted">No routes are open for this address yet.</p>}</div>
                 </fieldset>
+                </>)}
               </div>
 
               <aside className={cn("border-t p-5 sm:p-7 lg:border-l lg:border-t-0", prism ? "border-line-soft bg-page" : "border-[#eadbd6] bg-[#fff8f4]")}>
