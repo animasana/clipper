@@ -2,6 +2,12 @@
 
 import { BookingFlow } from "@/components/clipper/booking-flow";
 import { ThemeToggle } from "@/components/clipper/theme-toggle";
+import { formatKRW } from "@/lib/clipper/format";
+import { formatSeoulDateTime } from "@/lib/clipper/time";
+
+// Sample hero card data; rendered through the same formatters as real appointments.
+const sampleVisitStart = "2026-08-21T01:00:00Z"; // Fri, Aug 21, 10:00 AM KST
+const sampleVisitPriceKRW = 95000;
 
 export function PrismaticFlowHome() {
   return (
@@ -23,7 +29,7 @@ export function PrismaticFlowHome() {
           <div className="relative sm:min-h-[31rem] lg:min-h-[38rem]">
             <div className="relative w-[92%] rounded-2xl bg-surface/95 p-5 shadow-[0_30px_80px_rgba(50,50,93,.24)] ring-1 ring-ink/5 sm:absolute sm:left-[4%] sm:top-[8%] sm:w-[84%] sm:p-6">
               <div className="flex items-center justify-between gap-3"><div><p className="text-xs font-bold text-brand-text">UPCOMING VISIT</p><p className="mt-2 text-2xl font-bold tracking-[-0.04em]">Luna’s Full Groom</p></div><span className="rounded-full bg-success-wash px-3 py-1 text-xs font-bold text-success">Confirmed</span></div>
-              <div className="mt-6 grid grid-cols-2 gap-4 border-t border-line-soft pt-5 text-sm"><Detail label="WHEN" value="Fri, Aug 21 · 10:00" /><Detail label="GROOMER" value="Ava Choi" /><Detail label="NEIGHBORHOOD" value="Hannam-dong" /><Detail label="TOTAL" value="₩95,000" /></div>
+              <div className="mt-6 grid grid-cols-2 gap-4 border-t border-line-soft pt-5 text-sm"><Detail label="WHEN" value={formatSeoulDateTime(sampleVisitStart) ?? ""} /><Detail label="GROOMER" value="Ava Choi" /><Detail label="NEIGHBORHOOD" value="Hannam-dong" /><Detail label="TOTAL" value={formatKRW(sampleVisitPriceKRW)} /></div>
             </div>
             <div className="relative -mt-4 ml-auto w-[84%] rounded-2xl bg-night sm:absolute sm:bottom-[4%] sm:right-0 sm:mt-0 sm:w-[76%] p-5 text-white shadow-[0_28px_70px_rgba(10,37,64,.32)] sm:p-6"><p className="text-xs font-bold text-[#80e9ff]">ROUTE MATCH</p><div className="mt-4 flex items-center justify-between gap-4"><div><p className="font-bold">Ava → Hannam</p><p className="mt-1 text-sm text-[#adbdcc]">12 min away · supplies packed</p></div><span className="grid size-10 place-items-center rounded-full bg-brand font-bold">A</span></div><div className="mt-6 h-1.5 overflow-hidden rounded-full bg-white/15"><div className="h-full w-[72%] rounded-full bg-[linear-gradient(90deg,#80e9ff,#d783ff)]" /></div></div>
           </div>

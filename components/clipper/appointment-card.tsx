@@ -7,6 +7,7 @@ import Scissors from "lucide-react/icons/scissors";
 import StickyNote from "lucide-react/icons/sticky-note";
 import UserRound from "lucide-react/icons/user-round";
 
+import { formatDuration, formatKRW } from "@/lib/clipper/format";
 import { formatSeoulDate, formatSeoulTime } from "@/lib/clipper/time";
 import type { AppointmentDetails } from "@/lib/clipper/types";
 
@@ -62,7 +63,7 @@ const statusLabels: Record<string, { label: string; className: string }> = {
 
 function formatPrice(priceCents: number | null | undefined) {
   if (typeof priceCents !== "number") return "Price to be confirmed";
-  return `₩${priceCents.toLocaleString("ko-KR")}`;
+  return formatKRW(priceCents);
 }
 
 export function AppointmentCard({ appointment }: AppointmentCardProps) {
@@ -107,7 +108,7 @@ export function AppointmentCard({ appointment }: AppointmentCardProps) {
             <span>{address}{neighborhood}</span>
           </DetailRow>
           <DetailRow icon={<Clock3 aria-hidden="true" />} label="Visit length">
-            <strong className="block font-semibold text-ink">{service?.durationMinutes ?? "—"} minutes</strong>
+            <strong className="block font-semibold text-ink">{typeof service?.durationMinutes === "number" ? formatDuration(service.durationMinutes) : "Length to be confirmed"}</strong>
             <span>Our groomer brings everything</span>
           </DetailRow>
         </div>
