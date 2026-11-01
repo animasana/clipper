@@ -30,7 +30,7 @@ export function PrismaticFlowHome() {
         </section>
       </div>
 
-      <BookingFlow sectionId="book-prism" variant="prism" />
+      <BookingFlow sectionId="book-prism" />
       <Footer className="border-line bg-surface text-ink-soft" />
     </main>
   );
