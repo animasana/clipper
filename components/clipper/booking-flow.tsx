@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import * as RadioGroupPrimitive from "@radix-ui/react-radio-group";
+import { useEffect, useId, useState } from "react";
 
 import { Alert, AlertDescription, Button, Input } from "@/components/ui";
 import { formatSeoulDate, formatSeoulTime } from "@/lib/clipper/time";
@@ -40,6 +41,7 @@ const fallbackOptions: BookingOption = {
 };
 
 export function BookingFlow({ sectionId = "book", variant = "prism", theme = { ink: "var(--ink)", accent: "var(--brand)" } }: { sectionId?: string; variant?: "prism"; theme?: { ink: string; accent: string } }) {
+  const groupId = useId();
   const [options, setOptions] = useState<BookingOption>(fallbackOptions);
   // null while availability for the current selection is loading.
   const [slotState, setSlotState] = useState<SlotOption[] | null>(null);
@@ -161,8 +163,9 @@ export function BookingFlow({ sectionId = "book", variant = "prism", theme = { i
                 </fieldset>
 
                 <fieldset>
-                  <legend className="mb-4 text-lg font-bold tracking-[-0.025em]" style={{ color: ink }}>2. Choose a service</legend>
-                  <div className="divide-y divide-line-soft border-y border-line-soft">{options.packages.map((pkg) => <button type="button" key={pkg.id} onClick={() => { setSelectedPackageId(pkg.id); setFormError(""); }} className={cn("grid w-full grid-cols-[1fr_auto] items-center gap-5 px-1 py-5 text-left", selectedPackageId === pkg.id ? "" : "opacity-70 hover:opacity-100")}><span><span className="flex items-center gap-2 font-bold" style={{ color: ink }}><span className="size-2 rounded-full" style={{ background: selectedPackageId === pkg.id ? accent : "var(--line)" }} />{pkg.name}</span><span className="mt-1 block pl-4 text-xs leading-5 text-ink-faint">{pkg.description}</span></span><span className="text-right"><span className="block font-bold" style={{ color: ink }}>{formatMoney(pkg.priceCents)}</span><span className="text-xs text-ink-faint">{pkg.durationMinutes} min</span></span></button>)}</div>
+                  <legend id={`${groupId}-service`} className="mb-4 text-lg font-bold tracking-[-0.025em]" style={{ color: ink }}>2. Choose a service</legend>
+                  {/* Radix radio group: role="radiogroup"/"radio", aria-checked, arrow-key navigation. */}
+                  <RadioGroupPrimitive.Root aria-labelledby={`${groupId}-service`} value={selectedPackageId} onValueChange={(value) => { setSelectedPackageId(value); setFormError(""); }} className="divide-y divide-line-soft border-y border-line-soft">{options.packages.map((pkg) => <RadioGroupPrimitive.Item value={pkg.id} key={pkg.id} className={cn("grid w-full grid-cols-[1fr_auto] items-center gap-5 px-1 py-5 text-left outline-none focus-visible:ring-2 focus-visible:ring-brand", selectedPackageId === pkg.id ? "" : "opacity-70 hover:opacity-100")}><span><span className="flex items-center gap-2 font-bold" style={{ color: ink }}><span className="size-2 rounded-full" style={{ background: selectedPackageId === pkg.id ? accent : "var(--line)" }} />{pkg.name}</span><span className="mt-1 block pl-4 text-xs leading-5 text-ink-faint">{pkg.description}</span></span><span className="text-right"><span className="block font-bold" style={{ color: ink }}>{formatMoney(pkg.priceCents)}</span><span className="text-xs text-ink-faint">{pkg.durationMinutes} min</span></span></RadioGroupPrimitive.Item>)}</RadioGroupPrimitive.Root>
                 </fieldset>
 
                 <fieldset>
@@ -172,9 +175,10 @@ export function BookingFlow({ sectionId = "book", variant = "prism", theme = { i
                 </fieldset>
 
                 <fieldset>
-                  <legend className="mb-1 text-lg font-bold tracking-[-0.025em]" style={{ color: ink }}>4. Pick an arrival time</legend>
+                  <legend id={`${groupId}-time`} className="mb-1 text-lg font-bold tracking-[-0.025em]" style={{ color: ink }}>4. Pick an arrival time</legend>
                   <p className="mb-4 text-xs text-ink-faint">All times KST · matched against live groomer routes</p>
-                  <div className="grid gap-5 sm:grid-cols-2">{Object.entries(groupedSlots).map(([dateKey, dateSlots]) => <div key={dateKey}><p className="mb-2 text-sm font-bold" style={{ color: ink }}>{dateSlots[0]?.dateLabel}</p><div className="grid grid-cols-2 gap-2 min-[360px]:grid-cols-3 sm:grid-cols-2">{dateSlots.map((slot) => <button type="button" key={slot.startsAt} onClick={() => { setSelectedSlotStart(slot.startsAt); setFormError(""); }} className={cn("whitespace-nowrap rounded-md border px-2 py-3 text-sm font-bold sm:px-3", selectedSlot?.startsAt === slot.startsAt ? "text-white" : "border-line bg-surface text-ink-soft")} style={selectedSlot?.startsAt === slot.startsAt ? { background: accent, borderColor: accent } : undefined}>{slot.timeLabel}</button>)}</div></div>)}{!loadingSlots && !slots.length && <p className="text-sm text-ink-muted">No routes are open for this address yet.</p>}</div>
+                  {/* One radio group across all days (a single choice); each day is a labelled sub-group. */}
+                  <RadioGroupPrimitive.Root aria-labelledby={`${groupId}-time`} value={selectedSlot?.startsAt ?? ""} onValueChange={(value) => { setSelectedSlotStart(value); setFormError(""); }} className="grid gap-5 sm:grid-cols-2">{Object.entries(groupedSlots).map(([dateKey, dateSlots], dayIndex) => <div key={dateKey} role="group" aria-labelledby={`${groupId}-day-${dayIndex}`}><p id={`${groupId}-day-${dayIndex}`} className="mb-2 text-sm font-bold" style={{ color: ink }}>{dateSlots[0]?.dateLabel}</p><div className="grid grid-cols-2 gap-2 min-[360px]:grid-cols-3 sm:grid-cols-2">{dateSlots.map((slot) => <RadioGroupPrimitive.Item value={slot.startsAt} key={slot.startsAt} className={cn("whitespace-nowrap rounded-md border px-2 py-3 text-sm font-bold outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 sm:px-3", selectedSlot?.startsAt === slot.startsAt ? "text-white" : "border-line bg-surface text-ink-soft")} style={selectedSlot?.startsAt === slot.startsAt ? { background: accent, borderColor: accent } : undefined}>{slot.timeLabel}</RadioGroupPrimitive.Item>)}</div></div>)}{!loadingSlots && !slots.length && <p className="text-sm text-ink-muted">No routes are open for this address yet.</p>}</RadioGroupPrimitive.Root>
                 </fieldset>
               </div>
 
