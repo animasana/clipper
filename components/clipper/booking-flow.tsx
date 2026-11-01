@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useId, useState } from "react";
 
-import { Alert, AlertDescription, Button, Input } from "@/components/ui";
+import { Alert, AlertDescription, Button, Input, Label } from "@/components/ui";
+import { FIELD_LIMITS } from "@/lib/clipper/field-limits";
 import { formatSeoulDate, formatSeoulTime } from "@/lib/clipper/time";
 import type { AvailableSlot, BookingOption } from "@/lib/clipper/types";
 import { cn } from "@/lib/utils";
@@ -30,6 +31,8 @@ async function fetchJson<T>(url: string): Promise<T> {
   return response.json() as Promise<T>;
 }
 
+const fieldLabelClass = "text-xs font-bold leading-normal text-ink-muted";
+
 const fallbackOptions: BookingOption = {
   packages: [
     { id: "pkg_bath_brush", name: "Bath & Brush", description: "A refreshing bath, blow dry, brush-out, and nail trim.", durationMinutes: 60, priceCents: 65000 },
@@ -40,6 +43,7 @@ const fallbackOptions: BookingOption = {
 };
 
 export function BookingFlow({ sectionId = "book", variant = "prism", theme = { ink: "var(--ink)", accent: "var(--brand)" } }: { sectionId?: string; variant?: "prism"; theme?: { ink: string; accent: string } }) {
+  const fieldId = useId();
   const [options, setOptions] = useState<BookingOption>(fallbackOptions);
   // null while availability for the current selection is loading.
   const [slotState, setSlotState] = useState<SlotOption[] | null>(null);
@@ -157,7 +161,7 @@ export function BookingFlow({ sectionId = "book", variant = "prism", theme = { i
 
                 <fieldset>
                   <legend className="mb-4 text-lg font-bold tracking-[-0.025em]" style={{ color: ink }}>1. Who are we grooming?</legend>
-                  <div className="grid gap-3 sm:grid-cols-2"><label className="text-xs font-bold text-ink-muted">Pet name<Input aria-label="Pet name" value={petName} onChange={(event) => setPetName(event.target.value)} placeholder="e.g. Luna" className="mt-2 h-12 rounded-md border-line bg-surface px-4 text-base font-normal text-ink focus-visible:ring-brand" /></label><label className="text-xs font-bold text-ink-muted">Breed<select aria-label="Breed" value={petBreed} onChange={(event) => setPetBreed(event.target.value)} className="mt-2 h-12 w-full rounded-md border border-line bg-surface px-4 text-base font-normal text-ink outline-none focus:border-brand"><option value="">Choose a breed</option><option>Golden Retriever</option><option>Labrador Retriever</option><option>French Bulldog</option><option>German Shepherd</option><option>Poodle</option><option>Miniature Poodle</option><option>Pomeranian</option><option>Shiba Inu</option><option>Welsh Corgi</option><option>Yorkshire Terrier</option><option>Mixed Breed</option></select></label></div>
+                  <div className="grid gap-3 sm:grid-cols-2"><div><Label htmlFor={`${fieldId}-pet-name`} className={fieldLabelClass}>Pet name</Label><Input id={`${fieldId}-pet-name`} required autoComplete="off" maxLength={FIELD_LIMITS.petName} value={petName} onChange={(event) => setPetName(event.target.value)} placeholder="e.g. Luna" className="mt-2 h-12 rounded-md border-line bg-surface px-4 text-base font-normal text-ink focus-visible:ring-brand" /></div><div><Label htmlFor={`${fieldId}-breed`} className={fieldLabelClass}>Breed</Label><select id={`${fieldId}-breed`} required value={petBreed} onChange={(event) => setPetBreed(event.target.value)} className="mt-2 h-12 w-full rounded-md border border-line bg-surface px-4 text-base font-normal text-ink outline-none focus:border-brand"><option value="">Choose a breed</option><option>Golden Retriever</option><option>Labrador Retriever</option><option>French Bulldog</option><option>German Shepherd</option><option>Poodle</option><option>Miniature Poodle</option><option>Pomeranian</option><option>Shiba Inu</option><option>Welsh Corgi</option><option>Yorkshire Terrier</option><option>Mixed Breed</option></select></div></div>
                 </fieldset>
 
                 <fieldset>
@@ -167,7 +171,7 @@ export function BookingFlow({ sectionId = "book", variant = "prism", theme = { i
 
                 <fieldset>
                   <legend className="mb-4 text-lg font-bold tracking-[-0.025em]" style={{ color: ink }}>3. Where should we arrive?</legend>
-                  <div className="grid gap-3 sm:grid-cols-[1.25fr_0.75fr]"><Input aria-label="Street address" value={address} onChange={(event) => setAddress(event.target.value)} placeholder="Street address" className="h-12 rounded-md border-line bg-surface px-4 text-base focus-visible:ring-brand" /><select aria-label="Neighborhood" value={selectedNeighborhood} onChange={(event) => setSelectedNeighborhood(event.target.value)} className="h-12 rounded-md border border-line bg-surface px-4 text-base outline-none"><option value="">Neighborhood</option>{options.neighborhoods.map((neighborhood) => <option key={neighborhood} value={neighborhood}>{neighborhood}</option>)}</select></div>
+                  <div className="grid gap-3 sm:grid-cols-[1.25fr_0.75fr]"><div><Label htmlFor={`${fieldId}-address`} className={fieldLabelClass}>Street address</Label><Input id={`${fieldId}-address`} required autoComplete="address-line1" maxLength={FIELD_LIMITS.address} value={address} onChange={(event) => setAddress(event.target.value)} placeholder="e.g. 42 Itaewon-ro 27ga-gil" className="mt-2 h-12 rounded-md border-line bg-surface px-4 text-base font-normal text-ink focus-visible:ring-brand" /></div><div><Label htmlFor={`${fieldId}-neighborhood`} className={fieldLabelClass}>Neighborhood</Label><select id={`${fieldId}-neighborhood`} required value={selectedNeighborhood} onChange={(event) => setSelectedNeighborhood(event.target.value)} className="mt-2 h-12 w-full rounded-md border border-line bg-surface px-4 text-base text-ink outline-none"><option value="">Choose a neighborhood</option>{options.neighborhoods.map((neighborhood) => <option key={neighborhood} value={neighborhood}>{neighborhood}</option>)}</select></div></div>
                   <Input placeholder="Apt, floor, or gate code (optional)" className="mt-3 h-11 rounded-md border-line bg-surface px-4 text-base" />
                 </fieldset>
 

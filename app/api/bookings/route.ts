@@ -3,6 +3,7 @@ import { eq } from "drizzle-orm";
 import { groomingPackages } from "@/db/schema";
 import { createAppointmentWithFreeGroomer } from "@/lib/clipper/data";
 import { getDatabase } from "@/lib/clipper/db";
+import { FIELD_LIMITS } from "@/lib/clipper/field-limits";
 import { jsonError, logError, logEvent } from "@/lib/clipper/http";
 import { createAppointmentId, createBookingReference } from "@/lib/clipper/ids";
 
@@ -53,6 +54,13 @@ export async function POST(request: Request) {
 
   if (Number.isNaN(startsAt.getTime())) {
     return jsonError("startsAt must be a valid date.", 400);
+  }
+
+  if (petName.trim().length > FIELD_LIMITS.petName) {
+    return jsonError(`Keep the pet name under ${FIELD_LIMITS.petName} characters.`, 400);
+  }
+  if (address.trim().length > FIELD_LIMITS.address) {
+    return jsonError(`Keep the street address under ${FIELD_LIMITS.address} characters.`, 400);
   }
 
   try {
