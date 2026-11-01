@@ -15,7 +15,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
       <head>
         <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
       </head>
-      <body className="min-h-screen bg-sand text-charcoal antialiased">
+      <body className="min-h-screen bg-page text-ink antialiased">
         {children}
       </body>
     </html>
