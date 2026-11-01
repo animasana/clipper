@@ -64,7 +64,7 @@ export function BookingFlow({ sectionId = "book", variant = "prism", theme = { i
     groups[slot.dateLabel] = [...(groups[slot.dateLabel] ?? []), slot];
     return groups;
   }, {});
-  // Only a time the customer actually picked counts; never default to the earliest slot.
+  // Only an explicit pick counts.
   const selectedSlot = slots.find((slot) => slot.startsAt === selectedSlotStart);
   // Their pick disappeared after a refetch (e.g. a longer package no longer fits that time).
   const pickedSlotGone = selectedSlotStart !== "" && !loadingSlots && !selectedSlot;
@@ -176,7 +176,7 @@ export function BookingFlow({ sectionId = "book", variant = "prism", theme = { i
                 <fieldset>
                   <legend className="mb-1 text-lg font-bold tracking-[-0.025em]" style={{ color: ink }}>4. Pick an arrival time</legend>
                   <p className="mb-4 text-xs text-ink-faint">All times KST · matched against live groomer routes</p>
-                  {pickedSlotGone && <p role="status" className="mb-4 rounded-md border border-warn-line bg-warn-wash px-3 py-2 text-sm font-semibold text-warn">The time you picked isn’t available for this service and neighborhood. Please pick another.</p>}
+                  {pickedSlotGone && <Alert role="status" className="mb-4 border-warn-line bg-warn-wash text-warn"><AlertDescription>The time you picked isn’t available for this service and neighborhood. Please pick another.</AlertDescription></Alert>}
                   <div className="grid gap-5 sm:grid-cols-2">{Object.entries(groupedSlots).map(([dateKey, dateSlots]) => <div key={dateKey}><p className="mb-2 text-sm font-bold" style={{ color: ink }}>{dateSlots[0]?.dateLabel}</p><div className="grid grid-cols-2 gap-2 min-[360px]:grid-cols-3 sm:grid-cols-2">{dateSlots.map((slot) => <button type="button" key={slot.startsAt} onClick={() => { setSelectedSlotStart(slot.startsAt); setFormError(""); }} className={cn("whitespace-nowrap rounded-md border px-2 py-3 text-sm font-bold sm:px-3", selectedSlot?.startsAt === slot.startsAt ? "text-white" : "border-line bg-surface text-ink-soft")} style={selectedSlot?.startsAt === slot.startsAt ? { background: accent, borderColor: accent } : undefined}>{slot.timeLabel}</button>)}</div></div>)}{!loadingSlots && !slots.length && <p className="text-sm text-ink-muted">No routes are open for this address yet.</p>}</div>
                 </fieldset>
               </div>
