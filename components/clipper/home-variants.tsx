@@ -2,6 +2,7 @@
 
 import { BookingFlow } from "@/components/clipper/booking-flow";
 import { ThemeToggle } from "@/components/clipper/theme-toggle";
+import { BOOKING_SECTION_ID } from "@/lib/clipper/links";
 
 export function PrismaticFlowHome() {
   return (
@@ -10,14 +11,14 @@ export function PrismaticFlowHome() {
         <div aria-hidden="true" className="absolute -right-[22rem] -top-[34rem] -z-10 h-[70rem] w-[65rem] rotate-[28deg] bg-[linear-gradient(135deg,#ffdb80_4%,#ff8f70_28%,#d783ff_52%,#7a73ff_72%,#68d5ff_92%)] opacity-90 blur-[2px] dark:opacity-35" />
         <header className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-5 py-6 sm:px-8 lg:px-12">
           <a href="#" className="text-2xl font-black tracking-[-0.07em]">clipper</a>
-          <nav className="flex items-center gap-3 sm:gap-6"><a href="/appointments" className="whitespace-nowrap text-sm font-semibold text-ink hover:text-brand-text">Appointments</a><ThemeToggle /><a href="#book-prism" className="whitespace-nowrap rounded-full bg-brand px-4 py-2.5 text-sm font-bold !text-white shadow-[0_6px_18px_rgba(99,91,255,.25)] hover:bg-night max-[359px]:hidden sm:px-5">Book<span className="max-[399px]:hidden"> a visit</span> ›</a></nav>
+          <nav className="flex items-center gap-3 sm:gap-6"><a href="/appointments" className="whitespace-nowrap text-sm font-semibold text-ink hover:text-brand-text">Appointments</a><ThemeToggle /><a href={`#${BOOKING_SECTION_ID}`} className="whitespace-nowrap rounded-full bg-brand px-4 py-2.5 text-sm font-bold !text-white shadow-[0_6px_18px_rgba(99,91,255,.25)] hover:bg-night max-[359px]:hidden sm:px-5">Book<span className="max-[399px]:hidden"> a visit</span> ›</a></nav>
         </header>
 
         <section className="mx-auto grid max-w-7xl items-center gap-12 px-5 pb-16 pt-12 sm:px-8 sm:pb-24 sm:pt-16 lg:min-h-[44rem] lg:grid-cols-[1.08fr_0.92fr] lg:px-12 lg:pb-32 lg:pt-24">
           <div className="relative z-10">
             <h1 className="max-w-4xl text-[clamp(2.75rem,14vw,3.7rem)] font-bold sm:text-[clamp(3.7rem,7.6vw,7.2rem)] leading-[0.93] tracking-[-0.065em]">A calmer way to care for your favorite pet.</h1>
             <p className="mt-7 max-w-xl text-lg leading-8 text-ink-soft">Clipper coordinates trusted groomers, neighborhood routes, and your pet’s routine—so a full salon arrives at your door exactly when you need it.</p>
-            <div className="mt-9"><a href="#book-prism" className="inline-flex rounded-full bg-night px-6 py-3 text-sm font-bold !text-white hover:bg-brand">Find a time ›</a></div>
+            <div className="mt-9"><a href={`#${BOOKING_SECTION_ID}`} className="inline-flex rounded-full bg-night px-6 py-3 text-sm font-bold !text-white hover:bg-brand">Find a time ›</a></div>
           </div>
           {/* Phones stack the two cards in flow; from sm up they float over each other. */}
           <div className="relative sm:min-h-[31rem] lg:min-h-[38rem]">
@@ -30,7 +31,7 @@ export function PrismaticFlowHome() {
         </section>
       </div>
 
-      <BookingFlow sectionId="book-prism" variant="prism" />
+      <BookingFlow sectionId={BOOKING_SECTION_ID} variant="prism" />
       <Footer className="border-line bg-surface text-ink-soft" />
     </main>
   );

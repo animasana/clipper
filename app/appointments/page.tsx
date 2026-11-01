@@ -2,6 +2,7 @@ import Link from "next/link";
 
 import { ThemeToggle } from "@/components/clipper/theme-toggle";
 import { getAppointments } from "@/lib/clipper/data";
+import { BOOKING_HREF } from "@/lib/clipper/links";
 import { formatSeoulDate, formatSeoulTime } from "@/lib/clipper/time";
 
 export const dynamic = "force-dynamic";
@@ -22,7 +23,7 @@ export default async function AppointmentsPage() {
     <main className="min-h-screen bg-page text-ink">
       <header className="mx-auto flex max-w-6xl items-center justify-between px-5 py-6 sm:px-8">
         <Link href="/" className="text-2xl font-black tracking-[-0.07em]">clipper</Link>
-        <div className="flex items-center gap-2 sm:gap-4"><ThemeToggle /><Link href="/#book-prism" className="rounded-full bg-brand px-5 py-2.5 text-sm font-bold !text-white">Book a visit ›</Link></div>
+        <div className="flex items-center gap-2 sm:gap-4"><ThemeToggle /><Link href={BOOKING_HREF} className="rounded-full bg-brand px-5 py-2.5 text-sm font-bold !text-white">Book a visit ›</Link></div>
       </header>
 
       <section className="mx-auto max-w-6xl px-5 pb-24 pt-14 sm:px-8 sm:pt-20">
@@ -40,7 +41,7 @@ export default async function AppointmentsPage() {
             ))}
           </div>
         ) : (
-          <div className="mt-12 rounded-2xl border border-line bg-surface p-8 sm:p-12"><h2 className="text-2xl font-bold tracking-[-0.04em]">No appointments yet.</h2><p className="mt-3 text-ink-muted">When you book a visit, it will appear here.</p><Link href="/#book-prism" className="mt-7 inline-flex rounded-full bg-night px-6 py-3 text-sm font-bold !text-white">Book your first visit ›</Link></div>
+          <div className="mt-12 rounded-2xl border border-line bg-surface p-8 sm:p-12"><h2 className="text-2xl font-bold tracking-[-0.04em]">No appointments yet.</h2><p className="mt-3 text-ink-muted">When you book a visit, it will appear here.</p><Link href={BOOKING_HREF} className="mt-7 inline-flex rounded-full bg-night px-6 py-3 text-sm font-bold !text-white">Book your first visit ›</Link></div>
         )}
       </section>
     </main>

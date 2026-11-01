@@ -18,7 +18,7 @@ Check it's up first: `Invoke-WebRequest http://localhost:3000 -UseBasicParsing` 
 
 ## Drive (Chrome via claude-in-chrome)
 
-1. Open `http://localhost:3000/#book`, `find` the "Book a Clipper visit" region, `scroll_to` it.
+1. Open `http://localhost:3000/#book-prism` (`BOOKING_HREF` in `lib/clipper/links.ts`), `find` the "Book a Clipper visit" region, `scroll_to` it.
 2. The form is pre-filled (Luna / Miniature Poodle / Full Groom / Itaewon / address). Change the pet name to something unique so the booking is easy to spot.
 3. Click a time slot (grouped by KST date), check the Visit summary sidebar, click **Confirm visit →**.
 4. Success → redirects to `/appointments/CLP-XXXXXX` (confirmation hero + details card).

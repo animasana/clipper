@@ -10,6 +10,7 @@ import { ManageAppointment } from "@/components/clipper/manage-appointment";
 import { ThemeToggle } from "@/components/clipper/theme-toggle";
 import { changeBlockedReason } from "@/lib/clipper/changes";
 import { getAppointmentByReference } from "@/lib/clipper/data";
+import { BOOKING_HREF } from "@/lib/clipper/links";
 
 type AppointmentPageProps = {
   params: Promise<{ reference: string }>;
@@ -35,7 +36,7 @@ export default async function AppointmentPage({ params }: AppointmentPageProps) 
           <Link href="/" className="text-2xl font-black tracking-[-0.07em] text-ink">clipper</Link>
           <div className="flex items-center gap-2 sm:gap-4">
             <ThemeToggle />
-            <Link href="/#book-prism" className="inline-flex items-center gap-2 whitespace-nowrap rounded-full bg-brand px-5 py-2.5 text-sm font-bold !text-white transition-colors hover:bg-night">
+            <Link href={BOOKING_HREF} className="inline-flex items-center gap-2 whitespace-nowrap rounded-full bg-brand px-5 py-2.5 text-sm font-bold !text-white transition-colors hover:bg-night">
               <span className="max-[399px]:hidden">Book another visit</span><span className="min-[400px]:hidden">Book again</span> <ArrowUpRight aria-hidden="true" className="size-4" />
             </Link>
           </div>
