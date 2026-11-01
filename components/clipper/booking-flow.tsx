@@ -3,7 +3,8 @@
 import { useEffect, useState } from "react";
 
 import { Alert, AlertDescription, Button, Input } from "@/components/ui";
-import { formatSeoulDate, formatSeoulTime } from "@/lib/clipper/time";
+import { formatDuration, formatKRW } from "@/lib/clipper/format";
+import { formatSeoulDate, formatSeoulDateTime, formatSeoulTime } from "@/lib/clipper/time";
 import type { AvailableSlot, BookingOption } from "@/lib/clipper/types";
 import { cn } from "@/lib/utils";
 
@@ -11,10 +12,6 @@ type SlotOption = AvailableSlot & {
   dateLabel: string;
   timeLabel: string;
 };
-
-function formatMoney(cents: number) {
-  return `₩${cents.toLocaleString("ko-KR")}`;
-}
 
 function toSlotOption(slot: AvailableSlot): SlotOption {
   return {
@@ -162,7 +159,7 @@ export function BookingFlow({ sectionId = "book", variant = "prism", theme = { i
 
                 <fieldset>
                   <legend className="mb-4 text-lg font-bold tracking-[-0.025em]" style={{ color: ink }}>2. Choose a service</legend>
-                  <div className="divide-y divide-line-soft border-y border-line-soft">{options.packages.map((pkg) => <button type="button" key={pkg.id} onClick={() => { setSelectedPackageId(pkg.id); setFormError(""); }} className={cn("grid w-full grid-cols-[1fr_auto] items-center gap-5 px-1 py-5 text-left", selectedPackageId === pkg.id ? "" : "opacity-70 hover:opacity-100")}><span><span className="flex items-center gap-2 font-bold" style={{ color: ink }}><span className="size-2 rounded-full" style={{ background: selectedPackageId === pkg.id ? accent : "var(--line)" }} />{pkg.name}</span><span className="mt-1 block pl-4 text-xs leading-5 text-ink-faint">{pkg.description}</span></span><span className="text-right"><span className="block font-bold" style={{ color: ink }}>{formatMoney(pkg.priceCents)}</span><span className="text-xs text-ink-faint">{pkg.durationMinutes} min</span></span></button>)}</div>
+                  <div className="divide-y divide-line-soft border-y border-line-soft">{options.packages.map((pkg) => <button type="button" key={pkg.id} onClick={() => { setSelectedPackageId(pkg.id); setFormError(""); }} className={cn("grid w-full grid-cols-[1fr_auto] items-center gap-5 px-1 py-5 text-left", selectedPackageId === pkg.id ? "" : "opacity-70 hover:opacity-100")}><span><span className="flex items-center gap-2 font-bold" style={{ color: ink }}><span className="size-2 rounded-full" style={{ background: selectedPackageId === pkg.id ? accent : "var(--line)" }} />{pkg.name}</span><span className="mt-1 block pl-4 text-xs leading-5 text-ink-faint">{pkg.description}</span></span><span className="text-right"><span className="block font-bold" style={{ color: ink }}>{formatKRW(pkg.priceCents)}</span><span className="text-xs text-ink-faint">{formatDuration(pkg.durationMinutes)}</span></span></button>)}</div>
                 </fieldset>
 
                 <fieldset>
@@ -183,8 +180,8 @@ export function BookingFlow({ sectionId = "book", variant = "prism", theme = { i
                   <p className="text-xs font-bold uppercase tracking-[0.12em] text-ink-faint">Visit summary</p>
                   <p className="mt-5 text-2xl font-bold tracking-[-0.04em]" style={{ color: ink }}>{petName || "Your pet"}</p>
                   <p className="mt-1 text-sm text-ink-muted">{selectedPackage?.name ?? "Choose a service"}</p>
-                  <dl className="mt-7 space-y-4 border-y border-line py-5 text-sm"><div className="flex justify-between gap-3"><dt className="text-ink-faint">Arrival</dt><dd className="text-right font-semibold" style={{ color: ink }}>{selectedSlot ? `${selectedSlot.dateLabel}, ${selectedSlot.timeLabel}` : "Not selected"}</dd></div><div className="flex justify-between"><dt className="text-ink-faint">Duration</dt><dd className="font-semibold" style={{ color: ink }}>{durationMinutes} min</dd></div><div className="flex justify-between"><dt className="text-ink-faint">Neighborhood</dt><dd className="font-semibold" style={{ color: ink }}>{selectedNeighborhood || "Not selected"}</dd></div></dl>
-                  <div className="my-6 flex items-end justify-between"><span className="text-sm font-semibold text-ink-muted">Total</span><span className="text-3xl font-bold tracking-[-0.05em]" style={{ color: ink }}>{formatMoney(totalPrice)}</span></div>
+                  <dl className="mt-7 space-y-4 border-y border-line py-5 text-sm"><div className="flex justify-between gap-3"><dt className="text-ink-faint">Arrival</dt><dd className="text-right font-semibold" style={{ color: ink }}>{formatSeoulDateTime(selectedSlot?.startsAt) ?? "Not selected"}</dd></div><div className="flex justify-between"><dt className="text-ink-faint">Duration</dt><dd className="font-semibold" style={{ color: ink }}>{formatDuration(durationMinutes)}</dd></div><div className="flex justify-between"><dt className="text-ink-faint">Neighborhood</dt><dd className="font-semibold" style={{ color: ink }}>{selectedNeighborhood || "Not selected"}</dd></div></dl>
+                  <div className="my-6 flex items-end justify-between"><span className="text-sm font-semibold text-ink-muted">Total</span><span className="text-3xl font-bold tracking-[-0.05em]" style={{ color: ink }}>{formatKRW(totalPrice)}</span></div>
                   <Button type="button" onClick={validateAndSubmit} disabled={submitting || loading} className="h-12 w-full rounded-md text-sm font-bold !text-white shadow-none" style={{ background: accent }}>{submitting ? "Saving your spot…" : "Confirm visit →"}</Button>
                   <p className="mt-3 text-center text-[0.68rem] leading-5 text-ink-faint">No charge until your groomer is confirmed.</p>
                 </div>

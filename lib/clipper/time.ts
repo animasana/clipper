@@ -89,3 +89,9 @@ export function formatSeoulTime(value: DateInput): string | null {
   const date = toValidDate(value);
   return date && timeFormatter.format(date);
 }
+
+/** Seoul date and time for display ("Fri, Oct 23 · 10:00 AM"), or null when `value` is missing/invalid. */
+export function formatSeoulDateTime(value: DateInput): string | null {
+  const date = toValidDate(value);
+  return date && `${dateFormatters.short.format(date)} · ${timeFormatter.format(date)}`;
+}
