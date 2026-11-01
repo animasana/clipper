@@ -32,6 +32,8 @@ async function fetchJson<T>(url: string): Promise<T> {
 }
 
 const fieldLabelClass = "text-xs font-bold leading-normal text-ink-muted";
+const fieldInputClass = "mt-2 h-12 rounded-md border-line bg-surface px-4 text-base font-normal text-ink focus-visible:ring-brand";
+const fieldSelectClass = "mt-2 h-12 w-full rounded-md border border-line bg-surface px-4 text-base font-normal text-ink outline-none focus:border-brand";
 
 const fallbackOptions: BookingOption = {
   packages: [
@@ -161,7 +163,7 @@ export function BookingFlow({ sectionId = "book", variant = "prism", theme = { i
 
                 <fieldset>
                   <legend className="mb-4 text-lg font-bold tracking-[-0.025em]" style={{ color: ink }}>1. Who are we grooming?</legend>
-                  <div className="grid gap-3 sm:grid-cols-2"><div><Label htmlFor={`${fieldId}-pet-name`} className={fieldLabelClass}>Pet name</Label><Input id={`${fieldId}-pet-name`} required autoComplete="off" maxLength={FIELD_LIMITS.petName} value={petName} onChange={(event) => setPetName(event.target.value)} placeholder="e.g. Luna" className="mt-2 h-12 rounded-md border-line bg-surface px-4 text-base font-normal text-ink focus-visible:ring-brand" /></div><div><Label htmlFor={`${fieldId}-breed`} className={fieldLabelClass}>Breed</Label><select id={`${fieldId}-breed`} required value={petBreed} onChange={(event) => setPetBreed(event.target.value)} className="mt-2 h-12 w-full rounded-md border border-line bg-surface px-4 text-base font-normal text-ink outline-none focus:border-brand"><option value="">Choose a breed</option><option>Golden Retriever</option><option>Labrador Retriever</option><option>French Bulldog</option><option>German Shepherd</option><option>Poodle</option><option>Miniature Poodle</option><option>Pomeranian</option><option>Shiba Inu</option><option>Welsh Corgi</option><option>Yorkshire Terrier</option><option>Mixed Breed</option></select></div></div>
+                  <div className="grid gap-3 sm:grid-cols-2"><div><Label htmlFor={`${fieldId}-pet-name`} className={fieldLabelClass}>Pet name</Label><Input id={`${fieldId}-pet-name`} required autoComplete="off" maxLength={FIELD_LIMITS.petName} value={petName} onChange={(event) => setPetName(event.target.value)} placeholder="e.g. Luna" className={fieldInputClass} /></div><div><Label htmlFor={`${fieldId}-breed`} className={fieldLabelClass}>Breed</Label><select id={`${fieldId}-breed`} required value={petBreed} onChange={(event) => setPetBreed(event.target.value)} className={fieldSelectClass}><option value="">Choose a breed</option><option>Golden Retriever</option><option>Labrador Retriever</option><option>French Bulldog</option><option>German Shepherd</option><option>Poodle</option><option>Miniature Poodle</option><option>Pomeranian</option><option>Shiba Inu</option><option>Welsh Corgi</option><option>Yorkshire Terrier</option><option>Mixed Breed</option></select></div></div>
                 </fieldset>
 
                 <fieldset>
@@ -171,7 +173,7 @@ export function BookingFlow({ sectionId = "book", variant = "prism", theme = { i
 
                 <fieldset>
                   <legend className="mb-4 text-lg font-bold tracking-[-0.025em]" style={{ color: ink }}>3. Where should we arrive?</legend>
-                  <div className="grid gap-3 sm:grid-cols-[1.25fr_0.75fr]"><div><Label htmlFor={`${fieldId}-address`} className={fieldLabelClass}>Street address</Label><Input id={`${fieldId}-address`} required autoComplete="address-line1" maxLength={FIELD_LIMITS.address} value={address} onChange={(event) => setAddress(event.target.value)} placeholder="e.g. 42 Itaewon-ro 27ga-gil" className="mt-2 h-12 rounded-md border-line bg-surface px-4 text-base font-normal text-ink focus-visible:ring-brand" /></div><div><Label htmlFor={`${fieldId}-neighborhood`} className={fieldLabelClass}>Neighborhood</Label><select id={`${fieldId}-neighborhood`} required value={selectedNeighborhood} onChange={(event) => setSelectedNeighborhood(event.target.value)} className="mt-2 h-12 w-full rounded-md border border-line bg-surface px-4 text-base text-ink outline-none"><option value="">Choose a neighborhood</option>{options.neighborhoods.map((neighborhood) => <option key={neighborhood} value={neighborhood}>{neighborhood}</option>)}</select></div></div>
+                  <div className="grid gap-3 sm:grid-cols-[1.25fr_0.75fr]"><div><Label htmlFor={`${fieldId}-address`} className={fieldLabelClass}>Street address</Label><Input id={`${fieldId}-address`} required autoComplete="address-line1" maxLength={FIELD_LIMITS.address} value={address} onChange={(event) => setAddress(event.target.value)} placeholder="e.g. 42 Itaewon-ro 27ga-gil" className={fieldInputClass} /></div><div><Label htmlFor={`${fieldId}-neighborhood`} className={fieldLabelClass}>Neighborhood</Label><select id={`${fieldId}-neighborhood`} required value={selectedNeighborhood} onChange={(event) => setSelectedNeighborhood(event.target.value)} className={fieldSelectClass}><option value="">Choose a neighborhood</option>{options.neighborhoods.map((neighborhood) => <option key={neighborhood} value={neighborhood}>{neighborhood}</option>)}</select></div></div>
                   <Input placeholder="Apt, floor, or gate code (optional)" className="mt-3 h-11 rounded-md border-line bg-surface px-4 text-base" />
                 </fieldset>
 

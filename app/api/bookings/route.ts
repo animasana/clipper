@@ -45,21 +45,21 @@ export async function POST(request: Request) {
     );
   }
 
-  const petName = input.petName as string;
+  const petName = (input.petName as string).trim();
   const petBreed = input.petBreed as string;
   const packageId = input.packageId as string;
   const neighborhood = input.neighborhood as string;
-  const address = input.address as string;
+  const address = (input.address as string).trim();
   const startsAt = new Date(input.startsAt as string);
 
   if (Number.isNaN(startsAt.getTime())) {
     return jsonError("startsAt must be a valid date.", 400);
   }
 
-  if (petName.trim().length > FIELD_LIMITS.petName) {
+  if (petName.length > FIELD_LIMITS.petName) {
     return jsonError(`Keep the pet name under ${FIELD_LIMITS.petName} characters.`, 400);
   }
-  if (address.trim().length > FIELD_LIMITS.address) {
+  if (address.length > FIELD_LIMITS.address) {
     return jsonError(`Keep the street address under ${FIELD_LIMITS.address} characters.`, 400);
   }
 
@@ -85,10 +85,10 @@ export async function POST(request: Request) {
     const groomerId = await createAppointmentWithFreeGroomer({
       id: createAppointmentId(),
       bookingReference,
-      petName: petName.trim(),
+      petName,
       petBreed: petBreed.trim(),
       packageId,
-      address: address.trim(),
+      address,
       neighborhood: neighborhood.trim(),
       startsAt,
       endsAt,
