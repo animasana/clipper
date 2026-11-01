@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 
 import { Alert, AlertDescription, Button, Input } from "@/components/ui";
+import { BREED_MAX_LENGTH, BREEDS, MIXED_BREED, OTHER_BREED } from "@/lib/clipper/breeds";
 import { formatSeoulDate, formatSeoulTime } from "@/lib/clipper/time";
 import type { AvailableSlot, BookingOption } from "@/lib/clipper/types";
 import { cn } from "@/lib/utils";
@@ -45,6 +46,7 @@ export function BookingFlow({ sectionId = "book", variant = "prism", theme = { i
   const [slotState, setSlotState] = useState<SlotOption[] | null>(null);
   const [petName, setPetName] = useState("Luna");
   const [petBreed, setPetBreed] = useState("Miniature Poodle");
+  const [customBreed, setCustomBreed] = useState("");
   const [selectedPackageId, setSelectedPackageId] = useState("pkg_full_groom");
   const [selectedNeighborhood, setSelectedNeighborhood] = useState("Itaewon");
   const [address, setAddress] = useState("42 Itaewon-ro 27ga-gil");
@@ -108,7 +110,8 @@ export function BookingFlow({ sectionId = "book", variant = "prism", theme = { i
   }, [selectedNeighborhood, selectedPackageId]);
 
   function validateAndSubmit() {
-    if (!petName.trim() || !petBreed || !selectedPackageId || !selectedNeighborhood || !address || !selectedSlot) {
+    const breed = petBreed === OTHER_BREED ? customBreed.trim() : petBreed;
+    if (!petName.trim() || !breed ||!selectedPackageId || !selectedNeighborhood || !address || !selectedSlot) {
       setFormError("Please complete each step before booking your Clipper visit.");
       return;
     }
@@ -117,7 +120,7 @@ export function BookingFlow({ sectionId = "book", variant = "prism", theme = { i
     fetch("/api/bookings", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ petName: petName.trim(), petBreed, packageId: selectedPackageId, neighborhood: selectedNeighborhood, address, startsAt: selectedSlot.startsAt }),
+      body: JSON.stringify({ petName: petName.trim(), petBreed: breed, packageId: selectedPackageId, neighborhood: selectedNeighborhood, address, startsAt: selectedSlot.startsAt }),
     })
       .then((response) => {
         if (!response.ok) throw new Error("Could not create booking");
@@ -157,7 +160,8 @@ export function BookingFlow({ sectionId = "book", variant = "prism", theme = { i
 
                 <fieldset>
                   <legend className="mb-4 text-lg font-bold tracking-[-0.025em]" style={{ color: ink }}>1. Who are we grooming?</legend>
-                  <div className="grid gap-3 sm:grid-cols-2"><label className="text-xs font-bold text-ink-muted">Pet name<Input aria-label="Pet name" value={petName} onChange={(event) => setPetName(event.target.value)} placeholder="e.g. Luna" className="mt-2 h-12 rounded-md border-line bg-surface px-4 text-base font-normal text-ink focus-visible:ring-brand" /></label><label className="text-xs font-bold text-ink-muted">Breed<select aria-label="Breed" value={petBreed} onChange={(event) => setPetBreed(event.target.value)} className="mt-2 h-12 w-full rounded-md border border-line bg-surface px-4 text-base font-normal text-ink outline-none focus:border-brand"><option value="">Choose a breed</option><option>Golden Retriever</option><option>Labrador Retriever</option><option>French Bulldog</option><option>German Shepherd</option><option>Poodle</option><option>Miniature Poodle</option><option>Pomeranian</option><option>Shiba Inu</option><option>Welsh Corgi</option><option>Yorkshire Terrier</option><option>Mixed Breed</option></select></label></div>
+                  <div className="grid gap-3 sm:grid-cols-2"><label className="text-xs font-bold text-ink-muted">Pet name<Input aria-label="Pet name" value={petName} onChange={(event) => setPetName(event.target.value)} placeholder="e.g. Luna" className="mt-2 h-12 rounded-md border-line bg-surface px-4 text-base font-normal text-ink focus-visible:ring-brand" /></label><label className="text-xs font-bold text-ink-muted">Breed<select aria-label="Breed" value={petBreed} onChange={(event) => setPetBreed(event.target.value)} className="mt-2 h-12 w-full rounded-md border border-line bg-surface px-4 text-base font-normal text-ink outline-none focus:border-brand"><option value="">Choose a breed</option>{BREEDS.map((breed) => <option key={breed}>{breed}</option>)}<option>{MIXED_BREED}</option><option value={OTHER_BREED}>Other</option></select></label></div>
+                  {petBreed === OTHER_BREED && <label className="mt-3 block text-xs font-bold text-ink-muted">Your pet’s breed<Input value={customBreed} onChange={(event) => setCustomBreed(event.target.value)} maxLength={BREED_MAX_LENGTH} autoComplete="off" placeholder="e.g. Bedlington Terrier" className="mt-2 h-12 rounded-md border-line bg-surface px-4 text-base font-normal text-ink focus-visible:ring-brand" /></label>}
                 </fieldset>
 
                 <fieldset>
