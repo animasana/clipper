@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 
 import { Alert, AlertDescription, Button, Input } from "@/components/ui";
 import { formatSeoulDate, formatSeoulTime } from "@/lib/clipper/time";
+import { ADDRESS_DETAIL_MAX } from "@/lib/clipper/booking";
 import type { AvailableSlot, BookingOption } from "@/lib/clipper/types";
 import { cn } from "@/lib/utils";
 
@@ -48,6 +49,7 @@ export function BookingFlow({ sectionId = "book", variant = "prism", theme = { i
   const [selectedPackageId, setSelectedPackageId] = useState("pkg_full_groom");
   const [selectedNeighborhood, setSelectedNeighborhood] = useState("Itaewon");
   const [address, setAddress] = useState("42 Itaewon-ro 27ga-gil");
+  const [addressDetail, setAddressDetail] = useState("");
   const [selectedSlotStart, setSelectedSlotStart] = useState("");
   const [loadingOptions, setLoadingOptions] = useState(true);
   const [submitting, setSubmitting] = useState(false);
@@ -117,7 +119,7 @@ export function BookingFlow({ sectionId = "book", variant = "prism", theme = { i
     fetch("/api/bookings", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ petName: petName.trim(), petBreed, packageId: selectedPackageId, neighborhood: selectedNeighborhood, address, startsAt: selectedSlot.startsAt }),
+      body: JSON.stringify({ petName: petName.trim(), petBreed, packageId: selectedPackageId, neighborhood: selectedNeighborhood, address, addressDetail: addressDetail.trim(), startsAt: selectedSlot.startsAt }),
     })
       .then((response) => {
         if (!response.ok) throw new Error("Could not create booking");
@@ -168,7 +170,7 @@ export function BookingFlow({ sectionId = "book", variant = "prism", theme = { i
                 <fieldset>
                   <legend className="mb-4 text-lg font-bold tracking-[-0.025em]" style={{ color: ink }}>3. Where should we arrive?</legend>
                   <div className="grid gap-3 sm:grid-cols-[1.25fr_0.75fr]"><Input aria-label="Street address" value={address} onChange={(event) => setAddress(event.target.value)} placeholder="Street address" className="h-12 rounded-md border-line bg-surface px-4 text-base focus-visible:ring-brand" /><select aria-label="Neighborhood" value={selectedNeighborhood} onChange={(event) => setSelectedNeighborhood(event.target.value)} className="h-12 rounded-md border border-line bg-surface px-4 text-base outline-none"><option value="">Neighborhood</option>{options.neighborhoods.map((neighborhood) => <option key={neighborhood} value={neighborhood}>{neighborhood}</option>)}</select></div>
-                  <Input placeholder="Apt, floor, or gate code (optional)" className="mt-3 h-11 rounded-md border-line bg-surface px-4 text-base" />
+                  <label className="mt-3 block text-xs font-bold text-ink-muted">Apt, floor, or gate code <span className="font-normal text-ink-faint">(optional)</span><Input value={addressDetail} onChange={(event) => setAddressDetail(event.target.value)} autoComplete="address-line2" maxLength={ADDRESS_DETAIL_MAX} placeholder="e.g. 3F, gate code 1234" className="mt-2 h-11 rounded-md border-line bg-surface px-4 text-base font-normal text-ink focus-visible:ring-brand" /></label>
                 </fieldset>
 
                 <fieldset>

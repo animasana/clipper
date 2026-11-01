@@ -1,6 +1,7 @@
 import { eq } from "drizzle-orm";
 
 import { groomingPackages } from "@/db/schema";
+import { ADDRESS_DETAIL_MAX, addressDetailNote } from "@/lib/clipper/booking";
 import { createAppointmentWithFreeGroomer } from "@/lib/clipper/data";
 import { getDatabase } from "@/lib/clipper/db";
 import { jsonError, logError, logEvent } from "@/lib/clipper/http";
@@ -12,6 +13,8 @@ type BookingRequest = {
   packageId?: unknown;
   neighborhood?: unknown;
   address?: unknown;
+  /** Optional apartment, floor, or gate code. */
+  addressDetail?: unknown;
   startsAt?: unknown;
 };
 
@@ -55,6 +58,14 @@ export async function POST(request: Request) {
     return jsonError("startsAt must be a valid date.", 400);
   }
 
+  if (input.addressDetail !== undefined && typeof input.addressDetail !== "string") {
+    return jsonError("addressDetail must be a string.", 400);
+  }
+  const addressDetail = input.addressDetail ?? "";
+  if (addressDetail.trim().length > ADDRESS_DETAIL_MAX) {
+    return jsonError(`Keep the apt, floor, or gate code under ${ADDRESS_DETAIL_MAX} characters.`, 400);
+  }
+
   try {
     const db = getDatabase();
     const [groomingPackage] = await db
@@ -86,7 +97,7 @@ export async function POST(request: Request) {
       endsAt,
       status: "confirmed",
       priceCents: groomingPackage.priceCents,
-      notes: null,
+      notes: addressDetailNote(addressDetail),
       createdAt: now,
       updatedAt: now,
     });
