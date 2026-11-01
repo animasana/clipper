@@ -54,14 +54,6 @@
   --color-danger-wash: var(--danger-wash);
   --color-danger-line: var(--danger-line);
   --color-danger-fill: var(--danger-fill);
-  /* Warm palette used by the appointment error and not-found pages. */
-  --color-sand: var(--sand);
-  --color-paper: var(--paper);
-  --color-paper-line: var(--paper-line);
-  --color-charcoal: var(--charcoal);
-  --color-stone: var(--stone);
-  --color-clay: var(--clay);
-  --color-clay-wash: var(--clay-wash);
 }
 
 :root {
@@ -111,13 +103,6 @@
   --danger-wash: #fff0ef;
   --danger-line: #f3c4c0;
   --danger-fill: #9f3f38;
-  --sand: #f7f0e6;
-  --paper: #fffaf3;
-  --paper-line: #ded2c2;
-  --charcoal: #202321;
-  --stone: #766b61;
-  --clay: #b94f3e;
-  --clay-wash: #f4e2d6;
 
   color-scheme: light;
   background: var(--background);
@@ -175,13 +160,6 @@
   --danger-wash: #3a1716;
   --danger-line: #6a2a26;
   --danger-fill: #b8443c;
-  --sand: #17140f;
-  --paper: #221e18;
-  --paper-line: #3a3329;
-  --charcoal: #f3ece2;
-  --stone: #b3a796;
-  --clay: #e58a76;
-  --clay-wash: #3a221b;
 
   color-scheme: dark;
 }
