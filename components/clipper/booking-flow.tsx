@@ -68,8 +68,11 @@ export function BookingFlow({ sectionId = "book", variant = "prism", theme = { i
   const fieldRefs = useRef<Partial<Record<Field, Pick<HTMLElement, "focus" | "scrollIntoView"> | null>>>({});
   const idBase = useId();
   const errorId = (field: Field) => `${idBase}-${field}-error`;
-  // Spread onto each control: marks it invalid and points screen readers at its message.
-  const invalidProps = (field: Field) => fieldErrors[field] ? { "aria-invalid": true, "aria-describedby": errorId(field) } : {};
+  // Spread onto each control: registers it for focus, marks it invalid and points screen readers at its message.
+  const fieldProps = (field: Field) => ({
+    ref: (node: Pick<HTMLElement, "focus" | "scrollIntoView"> | null) => { fieldRefs.current[field] = node; },
+    ...(fieldErrors[field] ? { "aria-invalid": true, "aria-describedby": errorId(field) } : {}),
+  });
   const clearFieldError = (field: Field) => setFieldErrors((errors) => (errors[field] ? { ...errors, [field]: undefined } : errors));
 
   const slots = slotState ?? [];
@@ -141,13 +144,14 @@ export function BookingFlow({ sectionId = "book", variant = "prism", theme = { i
     const errors = validate();
     setFieldErrors(errors);
     const firstInvalid = fieldOrder.find((field) => errors[field]);
-    if (firstInvalid || !selectedSlot) {
-      const target = firstInvalid && fieldRefs.current[firstInvalid];
+    if (firstInvalid) {
+      const target = fieldRefs.current[firstInvalid];
       target?.focus({ preventScroll: true });
       // The Confirm button sits below the form on phones, so bring the problem into view.
       target?.scrollIntoView({ behavior: "smooth", block: "center" });
       return;
     }
+    if (!selectedSlot) return; // Unreachable (validate() flags it); narrows the type.
     setSubmitting(true);
     setFormError("");
     fetch("/api/bookings", {
@@ -193,7 +197,7 @@ export function BookingFlow({ sectionId = "book", variant = "prism", theme = { i
 
                 <fieldset>
                   <legend className="mb-4 text-lg font-bold tracking-[-0.025em]" style={{ color: ink }}>1. Who are we grooming?</legend>
-                  <div className="grid gap-3 sm:grid-cols-2"><div><label className="text-xs font-bold text-ink-muted">Pet name<Input ref={(node) => { fieldRefs.current.petName = node; }} aria-label="Pet name" required {...invalidProps("petName")} value={petName} onChange={(event) => { setPetName(event.target.value); clearFieldError("petName"); }} placeholder="e.g. Luna" className="mt-2 h-12 rounded-md border-line bg-surface px-4 text-base font-normal text-ink focus-visible:ring-brand aria-invalid:border-danger" /></label><FieldError id={errorId("petName")} message={fieldErrors.petName} /></div><div><label className="text-xs font-bold text-ink-muted">Breed<select ref={(node) => { fieldRefs.current.petBreed = node; }} aria-label="Breed" required {...invalidProps("petBreed")} value={petBreed} onChange={(event) => { setPetBreed(event.target.value); clearFieldError("petBreed"); }} className="mt-2 h-12 w-full rounded-md border border-line bg-surface px-4 text-base font-normal text-ink outline-none focus:border-brand aria-invalid:border-danger"><option value="">Choose a breed</option><option>Golden Retriever</option><option>Labrador Retriever</option><option>French Bulldog</option><option>German Shepherd</option><option>Poodle</option><option>Miniature Poodle</option><option>Pomeranian</option><option>Shiba Inu</option><option>Welsh Corgi</option><option>Yorkshire Terrier</option><option>Mixed Breed</option></select></label><FieldError id={errorId("petBreed")} message={fieldErrors.petBreed} /></div></div>
+                  <div className="grid gap-3 sm:grid-cols-2"><div><label className="text-xs font-bold text-ink-muted">Pet name<Input aria-label="Pet name" required {...fieldProps("petName")} value={petName} onChange={(event) => { setPetName(event.target.value); clearFieldError("petName"); }} placeholder="e.g. Luna" className="mt-2 h-12 rounded-md border-line bg-surface px-4 text-base font-normal text-ink focus-visible:ring-brand aria-invalid:border-danger" /></label><FieldError id={errorId("petName")} message={fieldErrors.petName} /></div><div><label className="text-xs font-bold text-ink-muted">Breed<select aria-label="Breed" required {...fieldProps("petBreed")} value={petBreed} onChange={(event) => { setPetBreed(event.target.value); clearFieldError("petBreed"); }} className="mt-2 h-12 w-full rounded-md border border-line bg-surface px-4 text-base font-normal text-ink outline-none focus:border-brand aria-invalid:border-danger"><option value="">Choose a breed</option><option>Golden Retriever</option><option>Labrador Retriever</option><option>French Bulldog</option><option>German Shepherd</option><option>Poodle</option><option>Miniature Poodle</option><option>Pomeranian</option><option>Shiba Inu</option><option>Welsh Corgi</option><option>Yorkshire Terrier</option><option>Mixed Breed</option></select></label><FieldError id={errorId("petBreed")} message={fieldErrors.petBreed} /></div></div>
                 </fieldset>
 
                 <fieldset>
@@ -203,7 +207,7 @@ export function BookingFlow({ sectionId = "book", variant = "prism", theme = { i
 
                 <fieldset>
                   <legend className="mb-4 text-lg font-bold tracking-[-0.025em]" style={{ color: ink }}>3. Where should we arrive?</legend>
-                  <div className="grid gap-3 sm:grid-cols-[1.25fr_0.75fr]"><div><Input ref={(node) => { fieldRefs.current.address = node; }} aria-label="Street address" required {...invalidProps("address")} value={address} onChange={(event) => { setAddress(event.target.value); clearFieldError("address"); }} placeholder="Street address" className="h-12 rounded-md border-line bg-surface px-4 text-base focus-visible:ring-brand aria-invalid:border-danger" /><FieldError id={errorId("address")} message={fieldErrors.address} /></div><div><select ref={(node) => { fieldRefs.current.neighborhood = node; }} aria-label="Neighborhood" required {...invalidProps("neighborhood")} value={selectedNeighborhood} onChange={(event) => { setSelectedNeighborhood(event.target.value); clearFieldError("neighborhood"); }} className="h-12 w-full rounded-md border border-line bg-surface px-4 text-base outline-none aria-invalid:border-danger"><option value="">Neighborhood</option>{options.neighborhoods.map((neighborhood) => <option key={neighborhood} value={neighborhood}>{neighborhood}</option>)}</select><FieldError id={errorId("neighborhood")} message={fieldErrors.neighborhood} /></div></div>
+                  <div className="grid gap-3 sm:grid-cols-[1.25fr_0.75fr]"><div><Input aria-label="Street address" required {...fieldProps("address")} value={address} onChange={(event) => { setAddress(event.target.value); clearFieldError("address"); }} placeholder="Street address" className="h-12 rounded-md border-line bg-surface px-4 text-base focus-visible:ring-brand aria-invalid:border-danger" /><FieldError id={errorId("address")} message={fieldErrors.address} /></div><div><select aria-label="Neighborhood" required {...fieldProps("neighborhood")} value={selectedNeighborhood} onChange={(event) => { setSelectedNeighborhood(event.target.value); clearFieldError("neighborhood"); }} className="h-12 w-full rounded-md border border-line bg-surface px-4 text-base outline-none aria-invalid:border-danger"><option value="">Neighborhood</option>{options.neighborhoods.map((neighborhood) => <option key={neighborhood} value={neighborhood}>{neighborhood}</option>)}</select><FieldError id={errorId("neighborhood")} message={fieldErrors.neighborhood} /></div></div>
                   <Input placeholder="Apt, floor, or gate code (optional)" className="mt-3 h-11 rounded-md border-line bg-surface px-4 text-base" />
                 </fieldset>
 
@@ -211,7 +215,7 @@ export function BookingFlow({ sectionId = "book", variant = "prism", theme = { i
                   <legend className="mb-1 text-lg font-bold tracking-[-0.025em]" style={{ color: ink }}>4. Pick an arrival time</legend>
                   <p className="mb-4 text-xs text-ink-faint">All times KST · matched against live groomer routes</p>
                   {/* Focus target when no time is picked; announces the error with the group. */}
-                  <div ref={(node) => { fieldRefs.current.slot = node; }} tabIndex={-1} role="group" aria-label="Arrival times" {...invalidProps("slot")} className="grid gap-5 rounded-md outline-none sm:grid-cols-2">{Object.entries(groupedSlots).map(([dateKey, dateSlots]) => <div key={dateKey}><p className="mb-2 text-sm font-bold" style={{ color: ink }}>{dateSlots[0]?.dateLabel}</p><div className="grid grid-cols-2 gap-2 min-[360px]:grid-cols-3 sm:grid-cols-2">{dateSlots.map((slot) => <button type="button" key={slot.startsAt} onClick={() => { setSelectedSlotStart(slot.startsAt); setFormError(""); clearFieldError("slot"); }} className={cn("whitespace-nowrap rounded-md border px-2 py-3 text-sm font-bold sm:px-3", selectedSlot?.startsAt === slot.startsAt ? "text-white" : "border-line bg-surface text-ink-soft")} style={selectedSlot?.startsAt === slot.startsAt ? { background: accent, borderColor: accent } : undefined}>{slot.timeLabel}</button>)}</div></div>)}{!loadingSlots && !slots.length && <p className="text-sm text-ink-muted">No routes are open for this address yet.</p>}</div>
+                  <div tabIndex={-1} role="group" aria-label="Arrival times" {...fieldProps("slot")} className="grid gap-5 rounded-md outline-none sm:grid-cols-2">{Object.entries(groupedSlots).map(([dateKey, dateSlots]) => <div key={dateKey}><p className="mb-2 text-sm font-bold" style={{ color: ink }}>{dateSlots[0]?.dateLabel}</p><div className="grid grid-cols-2 gap-2 min-[360px]:grid-cols-3 sm:grid-cols-2">{dateSlots.map((slot) => <button type="button" key={slot.startsAt} onClick={() => { setSelectedSlotStart(slot.startsAt); setFormError(""); clearFieldError("slot"); }} className={cn("whitespace-nowrap rounded-md border px-2 py-3 text-sm font-bold sm:px-3", selectedSlot?.startsAt === slot.startsAt ? "text-white" : "border-line bg-surface text-ink-soft")} style={selectedSlot?.startsAt === slot.startsAt ? { background: accent, borderColor: accent } : undefined}>{slot.timeLabel}</button>)}</div></div>)}{!loadingSlots && !slots.length && <p className="text-sm text-ink-muted">No routes are open for this address yet.</p>}</div>
                   <FieldError id={errorId("slot")} message={fieldErrors.slot} />
                 </fieldset>
               </div>
