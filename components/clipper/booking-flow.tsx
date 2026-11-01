@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { type FormEvent, useEffect, useId, useRef, useState } from "react";
 
 import { Alert, AlertDescription, Button, Input } from "@/components/ui";
 import { formatSeoulDate, formatSeoulTime } from "@/lib/clipper/time";
@@ -22,6 +22,16 @@ function toSlotOption(slot: AvailableSlot): SlotOption {
     dateLabel: formatSeoulDate(slot.startsAt) ?? "",
     timeLabel: formatSeoulTime(slot.startsAt) ?? "",
   };
+}
+
+/** Required fields, in on-screen order (the first invalid one gets focus). */
+const fieldOrder = ["petName", "petBreed", "address", "neighborhood", "slot"] as const;
+type Field = (typeof fieldOrder)[number];
+type FieldErrors = Partial<Record<Field, string>>;
+
+function FieldError({ id, message }: { id: string; message?: string }) {
+  if (!message) return null;
+  return <p id={id} className="mt-1.5 text-xs font-semibold text-danger">{message}</p>;
 }
 
 async function fetchJson<T>(url: string): Promise<T> {
@@ -51,7 +61,16 @@ export function BookingFlow({ sectionId = "book", variant = "prism", theme = { i
   const [selectedSlotStart, setSelectedSlotStart] = useState("");
   const [loadingOptions, setLoadingOptions] = useState(true);
   const [submitting, setSubmitting] = useState(false);
+  // Server/network failures only; missing input is reported next to each field.
   const [formError, setFormError] = useState("");
+  const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
+  // Structural type: the Workers type defs make HTMLSelectElement incompatible with HTMLElement.
+  const fieldRefs = useRef<Partial<Record<Field, Pick<HTMLElement, "focus" | "scrollIntoView"> | null>>>({});
+  const idBase = useId();
+  const errorId = (field: Field) => `${idBase}-${field}-error`;
+  // Spread onto each control: marks it invalid and points screen readers at its message.
+  const invalidProps = (field: Field) => fieldErrors[field] ? { "aria-invalid": true, "aria-describedby": errorId(field) } : {};
+  const clearFieldError = (field: Field) => setFieldErrors((errors) => (errors[field] ? { ...errors, [field]: undefined } : errors));
 
   const slots = slotState ?? [];
   const loadingSlots = slotState === null;
@@ -107,9 +126,26 @@ export function BookingFlow({ sectionId = "book", variant = "prism", theme = { i
     return () => { cancelled = true; };
   }, [selectedNeighborhood, selectedPackageId]);
 
-  function validateAndSubmit() {
-    if (!petName.trim() || !petBreed || !selectedPackageId || !selectedNeighborhood || !address || !selectedSlot) {
-      setFormError("Please complete each step before booking your Clipper visit.");
+  function validate(): FieldErrors {
+    const errors: FieldErrors = {};
+    if (!petName.trim()) errors.petName = "Enter your pet’s name.";
+    if (!petBreed) errors.petBreed = "Choose a breed.";
+    if (!address.trim()) errors.address = "Enter the street address.";
+    if (!selectedNeighborhood) errors.neighborhood = "Choose a neighborhood.";
+    if (!selectedSlot) errors.slot = "Pick an arrival time.";
+    return errors;
+  }
+
+  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const errors = validate();
+    setFieldErrors(errors);
+    const firstInvalid = fieldOrder.find((field) => errors[field]);
+    if (firstInvalid || !selectedSlot) {
+      const target = firstInvalid && fieldRefs.current[firstInvalid];
+      target?.focus({ preventScroll: true });
+      // The Confirm button sits below the form on phones, so bring the problem into view.
+      target?.scrollIntoView({ behavior: "smooth", block: "center" });
       return;
     }
     setSubmitting(true);
@@ -150,14 +186,14 @@ export function BookingFlow({ sectionId = "book", variant = "prism", theme = { i
           </div>
 
           <div className={cn("overflow-hidden border bg-surface", prism ? "rounded-2xl border-line shadow-[0_32px_90px_rgb(38_46_77/12%)]" : "rounded-xl border-[#eadbd6] shadow-[0_32px_90px_rgb(66_35_45/10%)] lg:grid lg:grid-cols-[15rem_minmax(0,1fr)]")}>
-            <div className={cn("grid", prism ? "lg:grid-cols-[minmax(0,1fr)_20rem]" : "lg:grid-cols-[minmax(0,1fr)_19rem]")}>
+            <form noValidate onSubmit={handleSubmit} className={cn("grid", prism ? "lg:grid-cols-[minmax(0,1fr)_20rem]" : "lg:grid-cols-[minmax(0,1fr)_19rem]")}>
               <div className="space-y-10 p-5 sm:p-8 lg:p-10">
                 {formError && <Alert className="border-danger-line bg-danger-wash text-danger"><AlertDescription>{formError}</AlertDescription></Alert>}
                 {loading && <p className="text-xs font-semibold text-ink-faint">Checking this week’s available routes…</p>}
 
                 <fieldset>
                   <legend className="mb-4 text-lg font-bold tracking-[-0.025em]" style={{ color: ink }}>1. Who are we grooming?</legend>
-                  <div className="grid gap-3 sm:grid-cols-2"><label className="text-xs font-bold text-ink-muted">Pet name<Input aria-label="Pet name" value={petName} onChange={(event) => setPetName(event.target.value)} placeholder="e.g. Luna" className="mt-2 h-12 rounded-md border-line bg-surface px-4 text-base font-normal text-ink focus-visible:ring-brand" /></label><label className="text-xs font-bold text-ink-muted">Breed<select aria-label="Breed" value={petBreed} onChange={(event) => setPetBreed(event.target.value)} className="mt-2 h-12 w-full rounded-md border border-line bg-surface px-4 text-base font-normal text-ink outline-none focus:border-brand"><option value="">Choose a breed</option><option>Golden Retriever</option><option>Labrador Retriever</option><option>French Bulldog</option><option>German Shepherd</option><option>Poodle</option><option>Miniature Poodle</option><option>Pomeranian</option><option>Shiba Inu</option><option>Welsh Corgi</option><option>Yorkshire Terrier</option><option>Mixed Breed</option></select></label></div>
+                  <div className="grid gap-3 sm:grid-cols-2"><div><label className="text-xs font-bold text-ink-muted">Pet name<Input ref={(node) => { fieldRefs.current.petName = node; }} aria-label="Pet name" required {...invalidProps("petName")} value={petName} onChange={(event) => { setPetName(event.target.value); clearFieldError("petName"); }} placeholder="e.g. Luna" className="mt-2 h-12 rounded-md border-line bg-surface px-4 text-base font-normal text-ink focus-visible:ring-brand aria-invalid:border-danger" /></label><FieldError id={errorId("petName")} message={fieldErrors.petName} /></div><div><label className="text-xs font-bold text-ink-muted">Breed<select ref={(node) => { fieldRefs.current.petBreed = node; }} aria-label="Breed" required {...invalidProps("petBreed")} value={petBreed} onChange={(event) => { setPetBreed(event.target.value); clearFieldError("petBreed"); }} className="mt-2 h-12 w-full rounded-md border border-line bg-surface px-4 text-base font-normal text-ink outline-none focus:border-brand aria-invalid:border-danger"><option value="">Choose a breed</option><option>Golden Retriever</option><option>Labrador Retriever</option><option>French Bulldog</option><option>German Shepherd</option><option>Poodle</option><option>Miniature Poodle</option><option>Pomeranian</option><option>Shiba Inu</option><option>Welsh Corgi</option><option>Yorkshire Terrier</option><option>Mixed Breed</option></select></label><FieldError id={errorId("petBreed")} message={fieldErrors.petBreed} /></div></div>
                 </fieldset>
 
                 <fieldset>
@@ -167,14 +203,16 @@ export function BookingFlow({ sectionId = "book", variant = "prism", theme = { i
 
                 <fieldset>
                   <legend className="mb-4 text-lg font-bold tracking-[-0.025em]" style={{ color: ink }}>3. Where should we arrive?</legend>
-                  <div className="grid gap-3 sm:grid-cols-[1.25fr_0.75fr]"><Input aria-label="Street address" value={address} onChange={(event) => setAddress(event.target.value)} placeholder="Street address" className="h-12 rounded-md border-line bg-surface px-4 text-base focus-visible:ring-brand" /><select aria-label="Neighborhood" value={selectedNeighborhood} onChange={(event) => setSelectedNeighborhood(event.target.value)} className="h-12 rounded-md border border-line bg-surface px-4 text-base outline-none"><option value="">Neighborhood</option>{options.neighborhoods.map((neighborhood) => <option key={neighborhood} value={neighborhood}>{neighborhood}</option>)}</select></div>
+                  <div className="grid gap-3 sm:grid-cols-[1.25fr_0.75fr]"><div><Input ref={(node) => { fieldRefs.current.address = node; }} aria-label="Street address" required {...invalidProps("address")} value={address} onChange={(event) => { setAddress(event.target.value); clearFieldError("address"); }} placeholder="Street address" className="h-12 rounded-md border-line bg-surface px-4 text-base focus-visible:ring-brand aria-invalid:border-danger" /><FieldError id={errorId("address")} message={fieldErrors.address} /></div><div><select ref={(node) => { fieldRefs.current.neighborhood = node; }} aria-label="Neighborhood" required {...invalidProps("neighborhood")} value={selectedNeighborhood} onChange={(event) => { setSelectedNeighborhood(event.target.value); clearFieldError("neighborhood"); }} className="h-12 w-full rounded-md border border-line bg-surface px-4 text-base outline-none aria-invalid:border-danger"><option value="">Neighborhood</option>{options.neighborhoods.map((neighborhood) => <option key={neighborhood} value={neighborhood}>{neighborhood}</option>)}</select><FieldError id={errorId("neighborhood")} message={fieldErrors.neighborhood} /></div></div>
                   <Input placeholder="Apt, floor, or gate code (optional)" className="mt-3 h-11 rounded-md border-line bg-surface px-4 text-base" />
                 </fieldset>
 
                 <fieldset>
                   <legend className="mb-1 text-lg font-bold tracking-[-0.025em]" style={{ color: ink }}>4. Pick an arrival time</legend>
                   <p className="mb-4 text-xs text-ink-faint">All times KST · matched against live groomer routes</p>
-                  <div className="grid gap-5 sm:grid-cols-2">{Object.entries(groupedSlots).map(([dateKey, dateSlots]) => <div key={dateKey}><p className="mb-2 text-sm font-bold" style={{ color: ink }}>{dateSlots[0]?.dateLabel}</p><div className="grid grid-cols-2 gap-2 min-[360px]:grid-cols-3 sm:grid-cols-2">{dateSlots.map((slot) => <button type="button" key={slot.startsAt} onClick={() => { setSelectedSlotStart(slot.startsAt); setFormError(""); }} className={cn("whitespace-nowrap rounded-md border px-2 py-3 text-sm font-bold sm:px-3", selectedSlot?.startsAt === slot.startsAt ? "text-white" : "border-line bg-surface text-ink-soft")} style={selectedSlot?.startsAt === slot.startsAt ? { background: accent, borderColor: accent } : undefined}>{slot.timeLabel}</button>)}</div></div>)}{!loadingSlots && !slots.length && <p className="text-sm text-ink-muted">No routes are open for this address yet.</p>}</div>
+                  {/* Focus target when no time is picked; announces the error with the group. */}
+                  <div ref={(node) => { fieldRefs.current.slot = node; }} tabIndex={-1} role="group" aria-label="Arrival times" {...invalidProps("slot")} className="grid gap-5 rounded-md outline-none sm:grid-cols-2">{Object.entries(groupedSlots).map(([dateKey, dateSlots]) => <div key={dateKey}><p className="mb-2 text-sm font-bold" style={{ color: ink }}>{dateSlots[0]?.dateLabel}</p><div className="grid grid-cols-2 gap-2 min-[360px]:grid-cols-3 sm:grid-cols-2">{dateSlots.map((slot) => <button type="button" key={slot.startsAt} onClick={() => { setSelectedSlotStart(slot.startsAt); setFormError(""); clearFieldError("slot"); }} className={cn("whitespace-nowrap rounded-md border px-2 py-3 text-sm font-bold sm:px-3", selectedSlot?.startsAt === slot.startsAt ? "text-white" : "border-line bg-surface text-ink-soft")} style={selectedSlot?.startsAt === slot.startsAt ? { background: accent, borderColor: accent } : undefined}>{slot.timeLabel}</button>)}</div></div>)}{!loadingSlots && !slots.length && <p className="text-sm text-ink-muted">No routes are open for this address yet.</p>}</div>
+                  <FieldError id={errorId("slot")} message={fieldErrors.slot} />
                 </fieldset>
               </div>
 
@@ -185,11 +223,11 @@ export function BookingFlow({ sectionId = "book", variant = "prism", theme = { i
                   <p className="mt-1 text-sm text-ink-muted">{selectedPackage?.name ?? "Choose a service"}</p>
                   <dl className="mt-7 space-y-4 border-y border-line py-5 text-sm"><div className="flex justify-between gap-3"><dt className="text-ink-faint">Arrival</dt><dd className="text-right font-semibold" style={{ color: ink }}>{selectedSlot ? `${selectedSlot.dateLabel}, ${selectedSlot.timeLabel}` : "Not selected"}</dd></div><div className="flex justify-between"><dt className="text-ink-faint">Duration</dt><dd className="font-semibold" style={{ color: ink }}>{durationMinutes} min</dd></div><div className="flex justify-between"><dt className="text-ink-faint">Neighborhood</dt><dd className="font-semibold" style={{ color: ink }}>{selectedNeighborhood || "Not selected"}</dd></div></dl>
                   <div className="my-6 flex items-end justify-between"><span className="text-sm font-semibold text-ink-muted">Total</span><span className="text-3xl font-bold tracking-[-0.05em]" style={{ color: ink }}>{formatMoney(totalPrice)}</span></div>
-                  <Button type="button" onClick={validateAndSubmit} disabled={submitting || loading} className="h-12 w-full rounded-md text-sm font-bold !text-white shadow-none" style={{ background: accent }}>{submitting ? "Saving your spot…" : "Confirm visit →"}</Button>
+                  <Button type="submit" disabled={submitting || loading} className="h-12 w-full rounded-md text-sm font-bold !text-white shadow-none" style={{ background: accent }}>{submitting ? "Saving your spot…" : "Confirm visit →"}</Button>
                   <p className="mt-3 text-center text-[0.68rem] leading-5 text-ink-faint">No charge until your groomer is confirmed.</p>
                 </div>
               </aside>
-            </div>
+            </form>
           </div>
         </div>
       </section>
