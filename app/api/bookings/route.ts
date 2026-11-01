@@ -3,6 +3,7 @@ import { eq } from "drizzle-orm";
 import { groomingPackages } from "@/db/schema";
 import { createAppointmentWithFreeGroomer } from "@/lib/clipper/data";
 import { getDatabase } from "@/lib/clipper/db";
+import { FIELD_LIMITS } from "@/lib/clipper/field-limits";
 import { jsonError, logError, logEvent } from "@/lib/clipper/http";
 import { createAppointmentId, createBookingReference } from "@/lib/clipper/ids";
 
@@ -44,15 +45,22 @@ export async function POST(request: Request) {
     );
   }
 
-  const petName = input.petName as string;
+  const petName = (input.petName as string).trim();
   const petBreed = input.petBreed as string;
   const packageId = input.packageId as string;
   const neighborhood = input.neighborhood as string;
-  const address = input.address as string;
+  const address = (input.address as string).trim();
   const startsAt = new Date(input.startsAt as string);
 
   if (Number.isNaN(startsAt.getTime())) {
     return jsonError("startsAt must be a valid date.", 400);
+  }
+
+  if (petName.length > FIELD_LIMITS.petName) {
+    return jsonError(`Keep the pet name under ${FIELD_LIMITS.petName} characters.`, 400);
+  }
+  if (address.length > FIELD_LIMITS.address) {
+    return jsonError(`Keep the street address under ${FIELD_LIMITS.address} characters.`, 400);
   }
 
   try {
@@ -77,10 +85,10 @@ export async function POST(request: Request) {
     const groomerId = await createAppointmentWithFreeGroomer({
       id: createAppointmentId(),
       bookingReference,
-      petName: petName.trim(),
+      petName,
       petBreed: petBreed.trim(),
       packageId,
-      address: address.trim(),
+      address,
       neighborhood: neighborhood.trim(),
       startsAt,
       endsAt,
