@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { type ReactNode, useEffect, useState } from "react";
 
 import { Alert, AlertDescription, Button, Input } from "@/components/ui";
 import { formatSeoulDate, formatSeoulTime } from "@/lib/clipper/time";
@@ -142,6 +142,24 @@ export function BookingFlow({ sectionId = "book", variant = "prism", theme = { i
   const ink = theme.ink;
   const accent = theme.accent;
 
+  // Step 4 status line: prompt, loading skeleton, or empty state (nothing once times are listed).
+  let slotStatus: ReactNode = null;
+  if (!selectedNeighborhood) {
+    slotStatus = <p>Choose a neighborhood in step 3 to see open times.</p>;
+  } else if (loadingSlots) {
+    slotStatus = <div><span className="sr-only">Checking this week’s available routes…</span><div aria-hidden="true" className="grid grid-cols-2 gap-2 min-[360px]:grid-cols-3 sm:grid-cols-4">{Array.from({ length: 8 }, (_, index) => <div key={index} className="h-11 animate-pulse rounded-md bg-line-soft" />)}</div></div>;
+  } else if (!slots.length) {
+    slotStatus = (
+      <div className="rounded-md border border-line bg-page px-4 py-4">
+        <p className="font-semibold text-ink">No openings in {selectedNeighborhood} for {selectedPackage?.name ?? "this service"} this week.</p>
+        <p className="mt-1">
+          {shorterPackage ? <>A shorter visit may fit: <button type="button" onClick={() => { setSelectedPackageId(shorterPackage.id); setFormError(""); }} className="font-bold text-brand-text underline-offset-2 hover:underline">try {shorterPackage.name} ({shorterPackage.durationMinutes} min)</button>, or call </> : "Call "}
+          <a href="tel:+8225550142" className="font-bold text-brand-text underline-offset-2 hover:underline">02-555-0142</a> and we’ll find a time.
+        </p>
+      </div>
+    );
+  }
+
   return (
       <section id={sectionId} className={cn("clipper-booking scroll-mt-5", `clipper-booking--${variant}`)}>
         <div className="mx-auto max-w-7xl px-5 pb-24 sm:px-8 lg:px-12">
@@ -178,21 +196,7 @@ export function BookingFlow({ sectionId = "book", variant = "prism", theme = { i
                   <legend className="mb-1 text-lg font-bold tracking-[-0.025em]" style={{ color: ink }}>4. Pick an arrival time</legend>
                   <p className="mb-4 text-xs text-ink-faint">All times KST · matched against live groomer routes</p>
                   {/* Polite live region so screen readers hear loading / empty results as the selection changes. */}
-                  <div aria-live="polite" className="text-sm text-ink-muted">
-                    {!selectedNeighborhood ? (
-                      <p>Choose a neighborhood in step 3 to see open times.</p>
-                    ) : loadingSlots ? (
-                      <div><span className="sr-only">Checking this week’s available routes…</span><div aria-hidden="true" className="grid grid-cols-2 gap-2 min-[360px]:grid-cols-3 sm:grid-cols-4">{Array.from({ length: 8 }, (_, index) => <div key={index} className="h-11 animate-pulse rounded-md bg-line-soft" />)}</div></div>
-                    ) : !slots.length ? (
-                      <div className="rounded-md border border-line bg-page px-4 py-4">
-                        <p className="font-semibold text-ink">No openings in {selectedNeighborhood} for {selectedPackage?.name ?? "this service"} this week.</p>
-                        <p className="mt-1">
-                          {shorterPackage ? <>A shorter visit may fit: <button type="button" onClick={() => { setSelectedPackageId(shorterPackage.id); setFormError(""); }} className="font-bold text-brand-text underline-offset-2 hover:underline">try {shorterPackage.name} ({shorterPackage.durationMinutes} min)</button>, or call </> : <>Call </>}
-                          <a href="tel:+8225550142" className="font-bold text-brand-text underline-offset-2 hover:underline">02-555-0142</a> and we’ll find a time.
-                        </p>
-                      </div>
-                    ) : null}
-                  </div>
+                  <div aria-live="polite" className="text-sm text-ink-muted">{slotStatus}</div>
                   <div className="grid gap-5 sm:grid-cols-2">{Object.entries(groupedSlots).map(([dateKey, dateSlots]) => <div key={dateKey}><p className="mb-2 text-sm font-bold" style={{ color: ink }}>{dateSlots[0]?.dateLabel}</p><div className="grid grid-cols-2 gap-2 min-[360px]:grid-cols-3 sm:grid-cols-2">{dateSlots.map((slot) => <button type="button" key={slot.startsAt} onClick={() => { setSelectedSlotStart(slot.startsAt); setFormError(""); }} className={cn("whitespace-nowrap rounded-md border px-2 py-3 text-sm font-bold sm:px-3", selectedSlot?.startsAt === slot.startsAt ? "text-white" : "border-line bg-surface text-ink-soft")} style={selectedSlot?.startsAt === slot.startsAt ? { background: accent, borderColor: accent } : undefined}>{slot.timeLabel}</button>)}</div></div>)}</div>
                 </fieldset>
               </div>
