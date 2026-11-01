@@ -30,6 +30,13 @@ async function fetchJson<T>(url: string): Promise<T> {
   return response.json() as Promise<T>;
 }
 
+/** A non-2xx from `/api/bookings`; `message` is the API's customer-facing `error`, if any. */
+class BookingRequestError extends Error {
+  constructor(readonly status: number, message = "") {
+    super(message);
+  }
+}
+
 const fallbackOptions: BookingOption = {
   packages: [
     { id: "pkg_bath_brush", name: "Bath & Brush", description: "A refreshing bath, blow dry, brush-out, and nail trim.", durationMinutes: 60, priceCents: 65000 },
@@ -52,6 +59,9 @@ export function BookingFlow({ sectionId = "book", variant = "prism", theme = { i
   const [loadingOptions, setLoadingOptions] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState("");
+  // Bumped to force a refetch (e.g. after a booking conflict) without changing the selection.
+  const [optionsVersion, setOptionsVersion] = useState(0);
+  const [slotsVersion, setSlotsVersion] = useState(0);
 
   const slots = slotState ?? [];
   const loadingSlots = slotState === null;
@@ -67,9 +77,10 @@ export function BookingFlow({ sectionId = "book", variant = "prism", theme = { i
   // Keep the customer's pick while it's still offered; otherwise default to the earliest slot.
   const selectedSlot = slots.find((slot) => slot.startsAt === selectedSlotStart) ?? slots[0];
 
-  // Catalog (packages + neighborhoods) is static: load it once.
+  // Catalog (packages + neighborhoods) is static: load it once, or again if a booking says a package is gone.
   useEffect(() => {
     let cancelled = false;
+    setLoadingOptions(true);
     fetchJson<BookingOption>("/api/booking-options")
       .then((data) => {
         if (cancelled) return;
@@ -85,7 +96,7 @@ export function BookingFlow({ sectionId = "book", variant = "prism", theme = { i
         if (!cancelled) setLoadingOptions(false);
       });
     return () => { cancelled = true; };
-  }, []);
+  }, [optionsVersion]);
 
   // Availability depends on the selection: refetch whenever it changes.
   useEffect(() => {
@@ -105,7 +116,7 @@ export function BookingFlow({ sectionId = "book", variant = "prism", theme = { i
         if (!cancelled) setSlotState([]);
       });
     return () => { cancelled = true; };
-  }, [selectedNeighborhood, selectedPackageId]);
+  }, [selectedNeighborhood, selectedPackageId, slotsVersion]);
 
   function validateAndSubmit() {
     if (!petName.trim() || !petBreed || !selectedPackageId || !selectedNeighborhood || !address || !selectedSlot) {
@@ -119,18 +130,33 @@ export function BookingFlow({ sectionId = "book", variant = "prism", theme = { i
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ petName: petName.trim(), petBreed, packageId: selectedPackageId, neighborhood: selectedNeighborhood, address, startsAt: selectedSlot.startsAt }),
     })
-      .then((response) => {
-        if (!response.ok) throw new Error("Could not create booking");
-        return response.json() as Promise<{ reference?: string; bookingReference?: string }>;
+      .then(async (response) => {
+        const data = (await response.json().catch(() => ({}))) as { reference?: string; bookingReference?: string; error?: string };
+        if (!response.ok) throw new BookingRequestError(response.status, data.error);
+        return data;
       })
       .then((data) => {
         const reference = data.reference ?? data.bookingReference;
-        if (!reference) throw new Error("Booking reference missing");
+        if (!reference) throw new BookingRequestError(500);
         window.location.assign(`/appointments/${encodeURIComponent(reference)}`);
       })
-      .catch(() => {
+      .catch((error: unknown) => {
         setSubmitting(false);
-        setFormError("We couldn’t save that visit. Please check your details and try again.");
+        const status = error instanceof BookingRequestError ? error.status : 0;
+        if (status === 409) {
+          // Someone else took the slot between loading and confirming: drop it and show what's still open.
+          setSelectedSlotStart("");
+          setSlotsVersion((version) => version + 1);
+          setFormError("That time was just booked by someone else. We’ve refreshed the open times. Please pick another.");
+        } else if (status === 404) {
+          // The package was removed from the catalog.
+          setOptionsVersion((version) => version + 1);
+          setFormError("That service is no longer offered. We’ve refreshed the list. Please choose again.");
+        } else if (status >= 400 && status < 500 && error instanceof BookingRequestError && error.message) {
+          setFormError(error.message);
+        } else {
+          setFormError("We couldn’t save that visit. Please try again in a moment.");
+        }
       });
   }
 
