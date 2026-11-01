@@ -2,6 +2,7 @@ import Link from "next/link";
 
 import { ThemeToggle } from "@/components/clipper/theme-toggle";
 import { getAppointments } from "@/lib/clipper/data";
+import { statusDisplay } from "@/lib/clipper/status";
 import { formatSeoulDate, formatSeoulTime } from "@/lib/clipper/time";
 
 export const dynamic = "force-dynamic";
@@ -12,6 +13,16 @@ function formatDate(value: string) {
 
 function formatMoney(cents: number) {
   return `₩${cents.toLocaleString("ko-KR")}`;
+}
+
+function StatusText({ status }: { status: string }) {
+  const { label, textClassName, Icon } = statusDisplay(status);
+  return (
+    <p className={`mt-1 inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-[0.1em] ${textClassName}`}>
+      <Icon aria-hidden="true" className="size-3.5" strokeWidth={3} />
+      {label}
+    </p>
+  );
 }
 
 export default async function AppointmentsPage() {
@@ -34,7 +45,7 @@ export default async function AppointmentsPage() {
             {appointments.map((appointment) => (
               <Link key={appointment.id} href={`/appointments/${appointment.reference}`} className="grid gap-4 border-b border-line-soft p-5 last:border-b-0 hover:bg-page sm:grid-cols-[1.25fr_1fr_auto] sm:items-center sm:p-7">
                 <div><p className="text-xl font-bold tracking-[-0.035em]">{appointment.pet.name} · {appointment.package.name}</p><p className="mt-1 text-sm text-ink-muted">{appointment.neighborhood} · {appointment.groomer?.name ?? "Groomer pending"}</p></div>
-                <div><p className="text-sm font-semibold">{formatDate(appointment.startsAt)}</p><p className="mt-1 text-xs uppercase tracking-[0.1em] text-success">{appointment.status}</p></div>
+                <div><p className="text-sm font-semibold">{formatDate(appointment.startsAt)}</p><StatusText status={appointment.status} /></div>
                 <div className="flex items-center justify-between gap-5 sm:block sm:text-right"><span className="font-bold">{formatMoney(appointment.priceCents)}</span><span className="ml-4 text-brand-text">›</span></div>
               </Link>
             ))}

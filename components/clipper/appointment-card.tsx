@@ -1,5 +1,4 @@
 import CalendarDays from "lucide-react/icons/calendar-days";
-import Check from "lucide-react/icons/check";
 import Clock3 from "lucide-react/icons/clock-3";
 import Dog from "lucide-react/icons/dog";
 import MapPin from "lucide-react/icons/map-pin";
@@ -7,6 +6,7 @@ import Scissors from "lucide-react/icons/scissors";
 import StickyNote from "lucide-react/icons/sticky-note";
 import UserRound from "lucide-react/icons/user-round";
 
+import { statusDisplay } from "@/lib/clipper/status";
 import { formatSeoulDate, formatSeoulTime } from "@/lib/clipper/time";
 import type { AppointmentDetails } from "@/lib/clipper/types";
 
@@ -41,25 +41,6 @@ type DetailsForDisplay = {
   } | null;
 };
 
-const statusLabels: Record<string, { label: string; className: string }> = {
-  confirmed: {
-    label: "Confirmed",
-    className: "border-success-line bg-success-wash text-success",
-  },
-  completed: {
-    label: "Completed",
-    className: "border-info-line bg-info-wash text-info",
-  },
-  cancelled: {
-    label: "Cancelled",
-    className: "border-danger-line bg-danger-wash text-danger",
-  },
-  pending: {
-    label: "Pending",
-    className: "border-warn-line bg-warn-wash text-warn",
-  },
-};
-
 function formatPrice(priceCents: number | null | undefined) {
   if (typeof priceCents !== "number") return "Price to be confirmed";
   return `₩${priceCents.toLocaleString("ko-KR")}`;
@@ -68,10 +49,7 @@ function formatPrice(priceCents: number | null | undefined) {
 export function AppointmentCard({ appointment }: AppointmentCardProps) {
   const details = appointment as unknown as DetailsForDisplay;
   const service = details.package ?? details.groomingPackage;
-  const status = statusLabels[details.status ?? ""] ?? {
-    label: details.status ?? "Booked",
-    className: "border-info-line bg-info-wash text-info",
-  };
+  const status = statusDisplay(details.status);
   const appointmentDate = formatSeoulDate(details.startsAt, "full") ?? "Date to be confirmed";
   const startTime = formatSeoulTime(details.startsAt) ?? "Time to be confirmed";
   const endTime = formatSeoulTime(details.endsAt) ?? "Time to be confirmed";
@@ -90,7 +68,7 @@ export function AppointmentCard({ appointment }: AppointmentCardProps) {
             </h2>
           </div>
           <span className={`inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-bold ${status.className}`}>
-            <Check aria-hidden="true" className="size-3.5" strokeWidth={3} />
+            <status.Icon aria-hidden="true" className="size-3.5" strokeWidth={3} />
             {status.label}
           </span>
         </div>
