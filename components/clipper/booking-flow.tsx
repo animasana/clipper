@@ -186,7 +186,7 @@ export function BookingFlow({ sectionId = "book", variant = "prism", theme = { i
                   <dl className="mt-7 space-y-4 border-y border-line py-5 text-sm"><div className="flex justify-between gap-3"><dt className="text-ink-faint">Arrival</dt><dd className="text-right font-semibold" style={{ color: ink }}>{selectedSlot ? `${selectedSlot.dateLabel}, ${selectedSlot.timeLabel}` : "Not selected"}</dd></div><div className="flex justify-between"><dt className="text-ink-faint">Duration</dt><dd className="font-semibold" style={{ color: ink }}>{durationMinutes} min</dd></div><div className="flex justify-between"><dt className="text-ink-faint">Neighborhood</dt><dd className="font-semibold" style={{ color: ink }}>{selectedNeighborhood || "Not selected"}</dd></div></dl>
                   <div className="my-6 flex items-end justify-between"><span className="text-sm font-semibold text-ink-muted">Total</span><span className="text-3xl font-bold tracking-[-0.05em]" style={{ color: ink }}>{formatMoney(totalPrice)}</span></div>
                   <Button type="button" onClick={validateAndSubmit} disabled={submitting || loading} className="h-12 w-full rounded-md text-sm font-bold !text-white shadow-none" style={{ background: accent }}>{submitting ? "Saving your spot…" : "Confirm visit →"}</Button>
-                  <p className="mt-3 text-center text-[0.68rem] leading-5 text-ink-faint">No charge until your groomer is confirmed.</p>
+                  <p className="mt-3 text-center text-[0.68rem] leading-5 text-ink-faint">Your groomer is assigned as soon as you confirm. Move or cancel online up to 24 hours before.</p>
                 </div>
               </aside>
             </div>
