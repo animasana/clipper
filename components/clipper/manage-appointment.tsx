@@ -2,10 +2,9 @@
 
 import { useState } from "react";
 
+import { SlotPicker } from "@/components/clipper/slot-picker";
 import { Alert, AlertDescription, Button } from "@/components/ui";
-import { formatSeoulDate, formatSeoulTime } from "@/lib/clipper/time";
 import type { AvailableSlot } from "@/lib/clipper/types";
-import { cn } from "@/lib/utils";
 
 type ManageAppointmentProps = {
   reference: string;
@@ -29,14 +28,10 @@ export function ManageAppointment({ reference, blockedReason }: ManageAppointmen
   const [selectedStart, setSelectedStart] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
+  // Loading the reschedule times failed; shown inside the picker with a retry.
+  const [slotsError, setSlotsError] = useState("");
 
   const basePath = `/api/appointments/${encodeURIComponent(reference)}`;
-  // Date labels are unique within the 7-day window, so they double as group keys.
-  const groupedSlots = (slots ?? []).reduce<Record<string, AvailableSlot[]>>((groups, slot) => {
-    const dateLabel = formatSeoulDate(slot.startsAt) ?? "";
-    groups[dateLabel] = [...(groups[dateLabel] ?? []), slot];
-    return groups;
-  }, {});
 
   if (blockedReason) {
     return (
@@ -50,13 +45,14 @@ export function ManageAppointment({ reference, blockedReason }: ManageAppointmen
   function startReschedule() {
     setMode("reschedule");
     setError("");
+    setSlotsError("");
     setSlots(null);
     setSelectedStart("");
     requestJson<{ slots: AvailableSlot[] }>(`${basePath}/availability`)
       .then((data) => setSlots(data.slots))
       .catch((requestError: Error) => {
         setSlots([]);
-        setError(requestError.message);
+        setSlotsError(requestError.message);
       });
   }
 
@@ -108,22 +104,14 @@ export function ManageAppointment({ reference, blockedReason }: ManageAppointmen
         <div className="mt-6 border-t border-line-soft pt-5">
           <p className="mb-1 font-bold text-ink">Pick a new arrival time</p>
           <p className="mb-4 text-xs text-ink-faint">All times KST · same length, same address</p>
-          {slots === null && <p className="text-xs font-semibold text-ink-faint">Checking this week’s available routes…</p>}
-          <div className="grid gap-5 sm:grid-cols-2">
-            {Object.entries(groupedSlots).map(([dateLabel, dateSlots]) => (
-              <div key={dateLabel}>
-                <p className="mb-2 text-sm font-bold text-ink">{dateLabel}</p>
-                <div className="grid grid-cols-2 gap-2 min-[360px]:grid-cols-3 sm:grid-cols-2">
-                  {dateSlots.map((slot) => (
-                    <button type="button" key={slot.startsAt} onClick={() => { setSelectedStart(slot.startsAt); setError(""); }} className={cn("whitespace-nowrap rounded-md border px-2 py-3 text-sm font-bold sm:px-3", selectedStart === slot.startsAt ? "border-brand bg-brand text-white" : "border-line bg-surface text-ink-soft")}>
-                      {formatSeoulTime(slot.startsAt)}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            ))}
-            {slots !== null && !slots.length && <p className="text-sm">No other times are open this week.</p>}
-          </div>
+          <SlotPicker
+            slots={slots}
+            selected={selectedStart}
+            onSelect={(startsAt) => { setSelectedStart(startsAt); setError(""); }}
+            emptyMessage="No other times are open this week."
+            error={slotsError}
+            onRetry={startReschedule}
+          />
           <div className="mt-5 flex gap-2">
             <Button type="button" onClick={() => submit("reschedule")} disabled={submitting || !selectedStart} className="h-10 rounded-md bg-brand px-4 text-sm font-bold !text-white shadow-none hover:bg-night">{submitting ? "Moving your visit…" : "Move visit →"}</Button>
             <Button type="button" variant="outline" onClick={reset} disabled={submitting} className="h-10 rounded-md border-line bg-surface px-4 text-sm font-bold text-ink">Never mind</Button>
