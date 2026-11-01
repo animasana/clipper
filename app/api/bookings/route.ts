@@ -1,6 +1,7 @@
 import { eq } from "drizzle-orm";
 
 import { groomingPackages } from "@/db/schema";
+import { BREED_MAX_LENGTH } from "@/lib/clipper/breeds";
 import { createAppointmentWithFreeGroomer } from "@/lib/clipper/data";
 import { getDatabase } from "@/lib/clipper/db";
 import { jsonError, logError, logEvent } from "@/lib/clipper/http";
@@ -50,6 +51,10 @@ export async function POST(request: Request) {
   const neighborhood = input.neighborhood as string;
   const address = input.address as string;
   const startsAt = new Date(input.startsAt as string);
+
+  if (petBreed.trim().length > BREED_MAX_LENGTH) {
+    return jsonError(`petBreed must be at most ${BREED_MAX_LENGTH} characters.`, 400);
+  }
 
   if (Number.isNaN(startsAt.getTime())) {
     return jsonError("startsAt must be a valid date.", 400);
