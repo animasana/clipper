@@ -52,6 +52,9 @@ export function BookingFlow({ sectionId = "book", variant = "prism", theme = { i
   const [loadingOptions, setLoadingOptions] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState("");
+  // Bumped to force a refetch (e.g. after a booking conflict) without changing the selection.
+  const [optionsVersion, setOptionsVersion] = useState(0);
+  const [slotsVersion, setSlotsVersion] = useState(0);
 
   const slots = slotState ?? [];
   const loadingSlots = slotState === null;
@@ -67,9 +70,10 @@ export function BookingFlow({ sectionId = "book", variant = "prism", theme = { i
   // Keep the customer's pick while it's still offered; otherwise default to the earliest slot.
   const selectedSlot = slots.find((slot) => slot.startsAt === selectedSlotStart) ?? slots[0];
 
-  // Catalog (packages + neighborhoods) is static: load it once.
+  // Catalog (packages + neighborhoods) is static: load it once, or again if a booking says a package is gone.
   useEffect(() => {
     let cancelled = false;
+    setLoadingOptions(true);
     fetchJson<BookingOption>("/api/booking-options")
       .then((data) => {
         if (cancelled) return;
@@ -85,7 +89,7 @@ export function BookingFlow({ sectionId = "book", variant = "prism", theme = { i
         if (!cancelled) setLoadingOptions(false);
       });
     return () => { cancelled = true; };
-  }, []);
+  }, [optionsVersion]);
 
   // Availability depends on the selection: refetch whenever it changes.
   useEffect(() => {
@@ -105,33 +109,49 @@ export function BookingFlow({ sectionId = "book", variant = "prism", theme = { i
         if (!cancelled) setSlotState([]);
       });
     return () => { cancelled = true; };
-  }, [selectedNeighborhood, selectedPackageId]);
+  }, [selectedNeighborhood, selectedPackageId, slotsVersion]);
 
-  function validateAndSubmit() {
+  async function validateAndSubmit() {
     if (!petName.trim() || !petBreed || !selectedPackageId || !selectedNeighborhood || !address || !selectedSlot) {
       setFormError("Please complete each step before booking your Clipper visit.");
       return;
     }
     setSubmitting(true);
     setFormError("");
-    fetch("/api/bookings", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ petName: petName.trim(), petBreed, packageId: selectedPackageId, neighborhood: selectedNeighborhood, address, startsAt: selectedSlot.startsAt }),
-    })
-      .then((response) => {
-        if (!response.ok) throw new Error("Could not create booking");
-        return response.json() as Promise<{ reference?: string; bookingReference?: string }>;
-      })
-      .then((data) => {
-        const reference = data.reference ?? data.bookingReference;
-        if (!reference) throw new Error("Booking reference missing");
-        window.location.assign(`/appointments/${encodeURIComponent(reference)}`);
-      })
-      .catch(() => {
-        setSubmitting(false);
-        setFormError("We couldn’t save that visit. Please check your details and try again.");
+    let status = 0;
+    type BookingResponse = { reference?: string; bookingReference?: string; error?: string };
+    let data: BookingResponse = {};
+    try {
+      const response = await fetch("/api/bookings", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ petName: petName.trim(), petBreed, packageId: selectedPackageId, neighborhood: selectedNeighborhood, address, startsAt: selectedSlot.startsAt }),
       });
+      status = response.status;
+      data = (await response.json().catch(() => ({}))) as BookingResponse;
+    } catch {
+      // Network failure: status stays 0 and falls through to the generic message.
+    }
+    const reference = data.reference ?? data.bookingReference;
+    if (status >= 200 && status < 300 && reference) {
+      window.location.assign(`/appointments/${encodeURIComponent(reference)}`);
+      return;
+    }
+    setSubmitting(false);
+    if (status === 409) {
+      // Someone else took the slot between loading and confirming: drop it and show what's still open.
+      setSelectedSlotStart("");
+      setSlotsVersion((version) => version + 1);
+      setFormError("That time was just booked by someone else. We’ve refreshed the open times. Please pick another.");
+    } else if (status === 404) {
+      // The package was removed from the catalog.
+      setOptionsVersion((version) => version + 1);
+      setFormError("That service is no longer offered. We’ve refreshed the list. Please choose again.");
+    } else if (status >= 400 && status < 500 && data.error) {
+      setFormError(data.error);
+    } else {
+      setFormError("We couldn’t save that visit. Please try again in a moment.");
+    }
   }
 
   const prism = true;
