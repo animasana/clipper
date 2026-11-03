@@ -5,7 +5,7 @@ import { useState } from "react";
 import { Alert, AlertDescription, Button } from "@/components/ui";
 import { formatSeoulDate, formatSeoulTime } from "@/lib/clipper/time";
 import type { AvailableSlot } from "@/lib/clipper/types";
-import { cn } from "@/lib/utils";
+import { cn, focusRing } from "@/lib/utils";
 
 type ManageAppointmentProps = {
   reference: string;
@@ -115,7 +115,7 @@ export function ManageAppointment({ reference, blockedReason }: ManageAppointmen
                 <p className="mb-2 text-sm font-bold text-ink">{dateLabel}</p>
                 <div className="grid grid-cols-2 gap-2 min-[360px]:grid-cols-3 sm:grid-cols-2">
                   {dateSlots.map((slot) => (
-                    <button type="button" key={slot.startsAt} onClick={() => { setSelectedStart(slot.startsAt); setError(""); }} className={cn("whitespace-nowrap rounded-md border px-2 py-3 text-sm font-bold sm:px-3", selectedStart === slot.startsAt ? "border-brand bg-brand text-white" : "border-line bg-surface text-ink-soft")}>
+                    <button type="button" key={slot.startsAt} onClick={() => { setSelectedStart(slot.startsAt); setError(""); }} className={cn("whitespace-nowrap rounded-md border px-2 py-3 text-sm font-bold sm:px-3", focusRing, selectedStart === slot.startsAt ? "border-brand bg-brand text-white" : "border-line bg-surface text-ink-soft")}>
                       {formatSeoulTime(slot.startsAt)}
                     </button>
                   ))}
